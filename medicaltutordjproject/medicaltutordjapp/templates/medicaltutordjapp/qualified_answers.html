@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calificación</title>
+    {% load custom_filters %}
+    {% load static %}
+    <script src="{% static 'js/qualificationsHandler.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+</head>
+<body>
+    <h2>Nota: {{ score }}/5</h2>
+    <hr>
+
+    <h3>Revisión:</h3>
+    <ul>
+        {% for question_id, result in results.items %}
+            <li>
+                Pregunta: {{ questions|get_item:question_id }}
+                <br>Tu respuesta: <strong>{{ result.user_answer }}</strong>
+                {% if result.result %}
+                    <span style="color: green;">Correcto</span>
+                {% else %}
+                    <span style="color: red;">Incorrecto</span>
+                    - La repuesta correcta es: {{ result.correct_answer }}
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <button id="go-home-button">Regresar al chat</button>
+    <button id="retry-button" onclick="showQuestionDialog()">Reintentar</button>
+    
+     <!-- Modal dialog for question selection -->
+     <div id="question-dialog" class="modal" style="display: none;">
+         <div class="modal-content">
+             <span class="close" onclick="closeQuestionDialog()">&times;</span>
+             <h3>Seleciona el número de preguntas</h3>
+             
+             <!-- Radio buttons for question options -->
+             <div>
+                 <label>
+                     <input type="radio" name="question-count" value="3">
+                     3 Preguntas
+                 </label><br>
+                 <label>
+                     <input type="radio" name="question-count" value="5">
+                     5 Preguntas
+                 </label><br>
+                 <label>
+                     <input type="radio" name="question-count" value="7">
+                     7 Preguntas
+                 </label><br>
+                 <label>
+                     <input type="radio" name="question-count" value="10">
+                     10 Preguntas
+                 </label>
+             </div>
+             
+             <!-- Action buttons -->
+             <div style="margin-top: 20px;">
+                 <button onclick="continueToNextPage()">Continuar</button>
+                 <button onclick="closeQuestionDialog()">Cancelar</button>
+             </div>
+         </div>
+     </div>
+     
+     <!-- Loading Dialog -->
+    <div id="loading-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Generando preguntas...</h3>
+            <p>Espere mientras preparo las preguntas.</p>
+            <div class="loading-spinner"></div> <!-- Optional: Add a spinner -->
+        </div>
+    </div>
+    
+</body>
+</html>
+

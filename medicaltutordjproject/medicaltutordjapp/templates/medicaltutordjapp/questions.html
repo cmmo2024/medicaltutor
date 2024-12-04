@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Cuestionario</title>
+                            {% load static %}
+                            <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+                        </head>
+<body>
+<form id="questions-form" action="/qualify_answers/" method="POST">
+{% csrf_token %}
+<h3>1. ¿Cuál de las siguientes opciones es un polisacárido estructural?</h3>
+
+                            <label>
+                                <input type="radio" name="q1" value="Celulosa">
+                                Celulosa
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q1" value="Almidón">
+                                Almidón
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q1" value="Glucógeno">
+                                Glucógeno
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q1" value="Sacarosa">
+                                Sacarosa
+                            </label><br>
+                        
+<h3>2. ¿Qué tipo de enlaces se encuentran en la estructura de la celulosa que la hacen resistente a la digestión?</h3>
+
+                            <label>
+                                <input type="radio" name="q2" value="β(1→4)">
+                                β(1→4)
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="α(1→4)">
+                                α(1→4)
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="α(1→6)">
+                                α(1→6)
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="β(1→6)">
+                                β(1→6)
+                            </label><br>
+                        
+<h3>3. ¿Cuál es la función principal de los polisacáridos de almacenamiento en los organismos vivos?</h3>
+
+                            <label>
+                                <input type="radio" name="q3" value="Fuente de energía">
+                                Fuente de energía
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q3" value="Soporte estructural">
+                                Soporte estructural
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q3" value="Modificación de proteínas">
+                                Modificación de proteínas
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q3" value="Absorción de luz">
+                                Absorción de luz
+                            </label><br>
+                        
+<!-- Modal Dialog -->
+        <div id="confirmation-dialog" class="modal">
+            <div class="modal-content">
+                <p>¿Seguro que quieres continuar? ¡Revisa bien!</p>
+                <input type="submit" value="Calificar">
+                <button onclick="closeDialog()" type="button">Seguir revisando</button>
+            </div>
+        </div>
+        <div id="overlay" class="modal-overlay"></div>
+</form>
+<script src="{% static 'js/submitHandler.js' %}"></script>
+<br><button onclick="showDialog()">Continuar</button>
+<button id="go-home-button" type="button">Regresar al chat</button>
+</body>

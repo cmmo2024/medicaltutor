@@ -1,0 +1,226 @@
+.container {
+    display: flex;
+}
+
+/* Sidebar starts open by default */
+.sidebar {
+    width: 250px; /* Default width */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: #f4f4f4;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-top: 60px; /* Offset for toggle button */
+    z-index: 1; /* Ensure sidebar is above content */
+    transition: width 0.3s ease-in-out; /* Smooth open/close animation */
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    margin-left:10px
+}
+
+.accordion {
+    background-color: #eee;
+    color: #444;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    text-align: left;
+    border: none;
+    outline: none;
+    transition: 0.4s;
+}
+
+.active, .accordion:hover {
+    background-color: #ccc;
+}
+
+.accordion:after {
+    content: '\02795'; /* Unicode character for "plus" sign (+) */
+    font-size: 13px;
+    color: #777;
+    float: right;
+    margin-left: 5px;
+}
+
+.active:after {
+    content: "\2796"; /* Unicode character for "minus" sign (-) */
+}
+
+.panel {
+    padding: 0 18px;
+    background-color: white;
+    display: none; /* Hidden by default */
+    overflow: hidden;
+    list-style-type: none;
+    margin: 0;
+}
+
+.panel li {
+    padding: 8px 0;
+    cursor: pointer;
+    color: #333;
+}
+
+.panel li:hover {
+    color: #0073e6;
+}
+
+/* Hamburger button styling */
+.toggle-btn {
+    position: fixed; /* Always visible at a fixed position */
+    top: 15px; /* Space from the top */
+    left: 15px; /* Space from the left */
+    z-index: 2; /* Ensure it’s above other elements */
+    background-color: #f4f4f4; /* Match the sidebar background */
+    color: #444; /* Match the font color of the "Subjects" heading */
+    border: 2px solid lightgray; /* Black border */
+    padding: 4px 5px; /* Smaller size with padding */
+    font-size: 16px; /* Slightly smaller font size */
+    border-radius: 8px; /* Rounded corners for a softer look */
+    cursor: pointer; /* Pointer cursor for interactivity */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions on hover */
+}
+
+/* Change color on hover */
+.toggle-btn:hover {
+    background-color: #ccc; /* Slightly darker background on hover */
+    color: #222; /* Darker font color for hover effect */
+}
+
+/* Chat panel adjusts for the sidebar */
+.chat-interface {
+    margin-left: 250px; /* Default shift for open sidebar */
+    padding: 20px;
+    background-color: #ffffff;
+    transition: margin-left 0.3s ease-in-out; /* Smooth animation */
+    flex-grow: 1;
+}
+
+#chat-content {
+    height: 400px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+#loading-indicator {
+    font-style: italic;
+    color: #888;
+    text-align: center;
+    margin: 10px 0;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+#loading-indicator {
+    animation: fadeInOut 2s infinite;
+}
+
+.error-message {
+    color: red;
+    font-style: italic;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.user-message {
+    color: blue;
+    margin: 5px 0;
+}
+
+.bot-message {
+    background-color: #f4f4f4;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 5px 0;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+}
+
+.bot-message h1, .bot-message h2, .bot-message h3 {
+    margin: 0;
+}
+
+.bot-message p {
+    margin: 0;
+}
+
+.bot-message code {
+    background-color: #e8e8e8;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.bot-message pre {
+    background-color: #e8e8e8;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+} 
+
+button:disabled {
+    background-color: #ccc; /* Light gray background */
+    color: #666; /* Dark gray text */
+    cursor: not-allowed;
+}
+
+
+/* Modal styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.loading-spinner {
+    border: 8px solid #f3f3f3; /* Light grey */
+    border-top: 8px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

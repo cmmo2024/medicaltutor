@@ -19,9 +19,9 @@ MedicalTutor is tailored for:
 ## Technology Stack
 
 - **Frontend**: HTML, CSS, JavaScript
-- **Backend**: Node.js (or your backend framework, e.g., Python/Flask, Django, etc.)
+- **Backend**: Django
 - **AI Integration**: OpenAI API
-- **Database**: (e.g., MongoDB, PostgreSQL, or SQLite for storing user data and progress)
+- **Database**: SQLite 
 
 ## Usage
 

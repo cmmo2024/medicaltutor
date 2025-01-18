@@ -10,86 +10,43 @@
 <body>
 <form id="questions-form" action="/qualify_answers/" method="POST">
 {% csrf_token %}
-<h3>1. ¿Cuál de las siguientes opciones es un polisacárido estructural?</h3>
+<h3>1. ¿Qué término describe la característica fundamental que define a todos los seres vivos en términos de su composición?</h3>
+<input type="text" name="q1" value=""><br>
+<h3>2. ¿Cuál de las siguientes opciones NO es considerada una forma básica de la vida en la actualidad?</h3>
+<p>2. ¿Cuál de las siguientes opciones NO es considerada una forma básica de la vida en la actualidad? <select name="q2"><option value="" disabled selected>Select an answer</option><option value="Bacterias">Bacterias</option><option value="Hongos">Hongos</option><option value="Máquinas">Máquinas</option></select>
+</p>
+<h3>3. ¿Cuál es el concepto que explica la diversidad de la vida a lo largo del tiempo a través de cambios en los organismos?</h3>
 
                             <label>
-                                <input type="radio" name="q1" value="Celulosa">
-                                Celulosa
+                                <input type="radio" name="q3" value="Evolución de la vida">
+                                Evolución de la vida
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Almidón">
-                                Almidón
+                                <input type="radio" name="q3" value="Origen de la vida">
+                                Origen de la vida
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Glucógeno">
-                                Glucógeno
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q1" value="Sacarosa">
-                                Sacarosa
-                            </label><br>
-                        
-<h3>2. ¿Qué tipo de enlaces se encuentran en la estructura de la celulosa que la hacen resistente a la digestión?</h3>
-
-                            <label>
-                                <input type="radio" name="q2" value="β(1→4)">
-                                β(1→4)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="α(1→4)">
-                                α(1→4)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="α(1→6)">
-                                α(1→6)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="β(1→6)">
-                                β(1→6)
-                            </label><br>
-                        
-<h3>3. ¿Cuál es la función principal de los polisacáridos de almacenamiento en los organismos vivos?</h3>
-
-                            <label>
-                                <input type="radio" name="q3" value="Fuente de energía">
-                                Fuente de energía
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q3" value="Soporte estructural">
-                                Soporte estructural
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q3" value="Modificación de proteínas">
-                                Modificación de proteínas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q3" value="Absorción de luz">
-                                Absorción de luz
+                                <input type="radio" name="q3" value="Unidad molecular">
+                                Unidad molecular
                             </label><br>
                         
 <!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">
-                <p>¿Seguro que quieres continuar? ¡Revisa bien!</p>
+                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez clificado ¡Revisa bien!</p>
                 <input type="submit" value="Calificar">
+                <button onclick="closeDialog()" type="button">Seguir revisando</button>
+            </div>
+        </div>
+        <!-- Modal Dialog for "Regresar al chat" -->
+        <div id="chat-confirmation-dialog" class="modal">
+            <div class="modal-content">
+                <p>¿Seguro que quieres regresar al chat? Perderás el progreso en este cuestionario.</p>
+                <button id="confirm-go-home-button" type="button">Regresar al chat</button>
                 <button onclick="closeDialog()" type="button">Seguir revisando</button>
             </div>
         </div>
@@ -97,5 +54,5 @@
 </form>
 <script src="{% static 'js/submitHandler.js' %}"></script>
 <br><button onclick="showDialog()">Continuar</button>
-<button id="go-home-button" type="button">Regresar al chat</button>
+<button onclick="showChatDialog()">Regresar al chat</button>
 </body>

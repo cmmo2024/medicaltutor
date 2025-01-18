@@ -15,9 +15,9 @@ client = OpenAI(api_key='')
 
 # Create your views here.
 
-def home(request):
+def chat(request):
     
-    return render(request, "medicaltutordjapp/home.html")
+    return render(request, "medicaltutordjapp/chat.html")
 
 @require_GET
 def ask_gpt(request):

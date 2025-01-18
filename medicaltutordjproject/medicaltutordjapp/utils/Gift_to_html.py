@@ -187,8 +187,16 @@ class gisfttohtml(object):
         html_output.append('''<!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">
-                <p>¿Seguro que quieres continuar? ¡Revisa bien!</p>
+                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez clificado ¡Revisa bien!</p>
                 <input type="submit" value="Calificar">
+                <button onclick="closeDialog()" type="button">Seguir revisando</button>
+            </div>
+        </div>
+        <!-- Modal Dialog for "Regresar al chat" -->
+        <div id="chat-confirmation-dialog" class="modal">
+            <div class="modal-content">
+                <p>¿Seguro que quieres regresar al chat? Perderás el progreso en este cuestionario.</p>
+                <button id="confirm-go-home-button" type="button">Regresar al chat</button>
                 <button onclick="closeDialog()" type="button">Seguir revisando</button>
             </div>
         </div>
@@ -199,7 +207,7 @@ class gisfttohtml(object):
         html_output.append('''<script src="{% static 'js/submitHandler.js' %}"></script>''')
         
         html_output.append('<br><button onclick="showDialog()">Continuar</button>')
-        html_output.append('<button id="go-home-button" type="button">Regresar al chat</button>')
+        html_output.append('<button onclick="showChatDialog()">Regresar al chat</button>')
         html_output.append("</body>")
         
         return '\n'.join(html_output)

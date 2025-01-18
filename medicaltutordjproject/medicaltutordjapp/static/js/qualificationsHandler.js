@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     var homeButton = document.getElementById("go-home-button");
     homeButton.addEventListener("click", function () {
-        window.location.href = "/";
+        window.location.href = "/chat/";
     });
 
     // Show the question dialog for retrying

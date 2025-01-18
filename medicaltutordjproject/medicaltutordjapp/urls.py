@@ -2,7 +2,7 @@ from django.urls import path
 from medicaltutordjapp import views
 
 urlpatterns = [
-    path('', views.home, name='home'),
+    path('chat/', views.chat, name='chat'),
     path('ask_gpt', views.ask_gpt, name='ask_gpt'),
     path('generate_questions/', views.generate_questions, name='generate_questions'),  # Handle GET requests for the questions page
     path('questions/', views.questions, name='questions'),  # Handle POST requests for generating questions

@@ -10,7 +10,7 @@ from django.db import IntegrityError
 from pathlib import Path
 from urllib.parse import unquote 
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
-from medicaltutordjapp.models import Plans
+from medicaltutordjapp.models import Plan
 
 from openai import OpenAI
 
@@ -67,7 +67,7 @@ def logout_view(request):
     return redirect('home')
 
 def plans(request):
-    all_plans = Plans.objects.all()
+    all_plans = Plan.objects.all()
     return render(request, 'medicaltutordjapp/plans.html', {'plans': all_plans})
 
 @login_required

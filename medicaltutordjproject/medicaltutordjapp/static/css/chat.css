@@ -1,0 +1,217 @@
+/* Chat interface styles */
+.container {
+    display: flex;
+}
+
+/* Navbar styles */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 97%;
+    height: 38px;
+    z-index: 1000;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.navbar p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.navbar a {
+    margin-left: 10px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.navbar a.btn {
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+/* Sidebar styles */
+.sidebar {
+    width: 250px;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    height: calc(100% - 60px);
+    background-color: #f4f4f4;
+    z-index: 900;
+    transition: width 0.3s ease-in-out;
+    overflow-y: auto;   
+}
+
+.sidebar.closed {
+    width: 0;
+    overflow: hidden;
+    transition: width 0.3s ease-in-out;
+}
+
+h2 {
+    font-size: 18px;
+    margin-top: 42px;
+    margin-bottom: 23px;
+    margin-left: 10px;
+}
+
+/* Accordion styles */
+.accordion {
+    background-color: #eee;
+    color: #444;
+    cursor: pointer;
+    padding: 18px;
+    width: 100%;
+    text-align: left;
+    border: none;
+    outline: none;
+    transition: 0.4s;
+}
+
+.active, .accordion:hover {
+    background-color: #ccc;
+}
+
+.accordion:after {
+    content: '\02795';
+    font-size: 13px;
+    color: #777;
+    float: right;
+    margin-left: 5px;
+}
+
+.active:after {
+    content: "\2796";
+}
+
+.panel {
+    padding: 0 18px;
+    background-color: white;
+    display: none;
+    overflow: hidden;
+    list-style-type: none;
+    margin: 0;
+}
+
+.panel li {
+    padding: 8px 0;
+    cursor: pointer;
+    color: #333;
+}
+
+.panel li:hover {
+    color: #0073e6;
+}
+
+/* Toggle button styles */
+.toggle-btn {
+    position: fixed;
+    top: 63px;
+    left: 15px;
+    z-index: 950;
+    background-color: #f4f4f4;
+    color: #444;
+    border: 2px solid lightgray;
+    padding: 4px 5px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.toggle-btn:hover {
+    background-color: #ccc;
+    color: #222;
+}
+
+.toggle-btn.sidebar-closed {
+    left: 15px;
+}
+
+/* Chat interface styles */
+.chat-interface {
+    margin-left: 250px;
+    margin-top: 60px;
+    padding: 20px;
+    background-color: #ffffff;
+    flex-grow: 1;
+    z-index: 800;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+#chat-content {
+    height: 400px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.chat-interface.sidebar-closed {
+    margin-left: 0;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+/* Loading and message styles */
+#loading-indicator {
+    font-style: italic;
+    color: #888;
+    text-align: center;
+    margin: 10px 0;
+    animation: fadeInOut 2s infinite;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+.error-message {
+    color: red;
+    font-style: italic;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.user-message {
+    color: blue;
+    margin: 5px 0;
+}
+
+.bot-message {
+    background-color: #f4f4f4;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 5px 0;
+    font-family: Arial, sans-serif;
+    line-height: 1.5;
+}
+
+.bot-message h1, .bot-message h2, .bot-message h3 {
+    margin: 0;
+}
+
+.bot-message p {
+    margin: 0;
+}
+
+.bot-message code {
+    background-color: #e8e8e8;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+.bot-message pre {
+    background-color: #e8e8e8;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}

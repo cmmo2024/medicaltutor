@@ -4,25 +4,38 @@ from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    plan = models.ForeignKey('Plans', on_delete=models.DO_NOTHING, null=True, blank=True)
+    plan = models.ForeignKey('Plan', on_delete=models.DO_NOTHING, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.plan.plan_name if self.plan else 'No Plan'}"
 
-
-class Payments(models.Model):
+class Payment(models.Model):
+    # Fields
     payment_id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)  
     amount = models.FloatField()
     card_number = models.TextField()
     payment_date = models.DateTimeField(blank=True, null=True)
+    
+    # Constant field for ID card receiving transactions
+    RECEIVER_ID_CARD = "1234567890"  # Replace with the actual ID card value
+
+    receiver_id_card = models.CharField(
+        max_length=20, 
+        default=RECEIVER_ID_CARD, 
+        editable=False
+    )
 
     class Meta:
         managed = True
         db_table = 'payments'
 
+    def save(self, *args, **kwargs):
+        # Ensure the constant field is set correctly
+        self.receiver_id_card = self.RECEIVER_ID_CARD
+        super().save(*args, **kwargs)
 
-class Plans(models.Model):
+class Plan(models.Model):
     plan_id = models.AutoField(primary_key=True)
     plan_name = models.TextField()
     price = models.FloatField()
@@ -30,7 +43,7 @@ class Plans(models.Model):
     max_quizzes_per_month = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = True
+        managed = False
         db_table = 'plans'
 
 

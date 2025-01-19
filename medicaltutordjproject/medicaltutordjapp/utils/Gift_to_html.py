@@ -90,7 +90,8 @@ class gisfttohtml(object):
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
                             <title>Cuestionario</title>
                             {% load static %}
-                            <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+                            <link rel="stylesheet" href="{% static 'css/common.css' %}"
+                            <link rel="stylesheet" href="{% static 'css/questions.css' %}">
                         </head>''')
         
         html_output.append('<body>')

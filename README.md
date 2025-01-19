@@ -30,11 +30,6 @@ MedicalTutor is tailored for:
 3. **Learn**: Review the provided summaries and resources.
 4. **Practice**: Take quizzes or ask questions to test your knowledge.
 
-## Acknowledgments
-
-- **OpenAI**: For providing the API that powers the tutor.
-- **Cuban Medical Community**: For inspiring this project and their dedication to education.
-
 ## Contact
 
 For questions or support, feel free to reach out:

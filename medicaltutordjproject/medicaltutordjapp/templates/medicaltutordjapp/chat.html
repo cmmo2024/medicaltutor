@@ -12,6 +12,15 @@
     
 </head>
 <body>
+      <div class="navbar">
+          {% if user.is_authenticated %}
+              <p>Bienvenido, {{ user.first_name }} ({{ user.email }})</p>
+              <p>Plan actual: {{ user.profile.plan.plan_name }}</p>
+              <a href="{% url 'plans' %}" class="btn btn-danger">Planes</a>
+              <a href="{% url 'logout' %}" class="btn btn-danger">Cerrar sesión</a>
+          {% endif %}
+      </div>
+
       <div class="container">
         <!-- Sidebar with accordion structure -->
         <div class="sidebar" id="mySidebar">

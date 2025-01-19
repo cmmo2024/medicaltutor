@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planes de Pago</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <h1>Planes Disponibles</h1>
+    <div class="plans-container">
+        {% for plan in plans %}
+            <div class="plan">
+                <h2>{{ plan.plan_name }}</h2>
+                <p>Precio: {{ plan.price }} CUP</p>
+                <p>Consultas máximas por mes: {{ plan.max_queries_per_month }}</p>
+                <p>Exámenes máximos por mes: {{ plan.max_quizzes_per_month }}</p>
+                <a href="{% url 'subscribe' plan.plan_id %}" class="btn btn-primary">Suscribirse</a>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

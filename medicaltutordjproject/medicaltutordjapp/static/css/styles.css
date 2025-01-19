@@ -1,26 +1,66 @@
+/* Existing styles */
 .container {
     display: flex;
 }
 
-/* Sidebar starts open by default */
-.sidebar {
-    width: 250px; /* Default width */
-    position: fixed;
+/* Navbar: Ensure it has the highest z-index */
+.navbar {
+    position: fixed; /* Always at the top */
     top: 0;
     left: 0;
-    height: 100%;
+    width: 97%; /* Full width */
+    height: 38px; /* Fixed height */
+    z-index: 1000; /* Above sidebar and toggle button */
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.navbar p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.navbar a {
+    margin-left: 10px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.navbar a.btn {
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+/* Sidebar: Adjust to ensure it sits under the navbar */
+.sidebar {
+    width: 250px; /* Fixed width for the sidebar */
+    position: fixed; /* Sticks to the left */
+    top: 60px; /* Below the navbar */
+    left: 0;
+    height: calc(100% - 60px); /* Avoid overlapping the navbar */
     background-color: #f4f4f4;
-    overflow-x: hidden;
-    overflow-y: auto;
-    padding-top: 60px; /* Offset for toggle button */
-    z-index: 1; /* Ensure sidebar is above content */
+    z-index: 900; /* Below the navbar */
     transition: width 0.3s ease-in-out; /* Smooth open/close animation */
+    overflow-y: auto;   
+}
+
+/* Sidebar Closed: Collapse the sidebar */
+.sidebar.closed {
+    width: 0; /* Fully collapse */
+    overflow: hidden; /* Hide overflowing content */
+    transition: width 0.3s ease-in-out; /* Smooth collapse animation */
 }
 
 h2 {
     font-size: 18px;
-    margin-bottom: 10px;
-    margin-left:10px
+    margin-top: 42px;
+    margin-bottom: 23px;
+    margin-left: 10px;
 }
 
 .accordion {
@@ -70,35 +110,42 @@ h2 {
     color: #0073e6;
 }
 
-/* Hamburger button styling */
+/* Toggle Button: Adjust positioning and z-index */
 .toggle-btn {
-    position: fixed; /* Always visible at a fixed position */
-    top: 15px; /* Space from the top */
+    position: fixed; /* Always visible */
+    top: 63px; /* Space from the top (within navbar height) */
     left: 15px; /* Space from the left */
-    z-index: 2; /* Ensure it’s above other elements */
-    background-color: #f4f4f4; /* Match the sidebar background */
-    color: #444; /* Match the font color of the "Subjects" heading */
-    border: 2px solid lightgray; /* Black border */
-    padding: 4px 5px; /* Smaller size with padding */
-    font-size: 16px; /* Slightly smaller font size */
-    border-radius: 8px; /* Rounded corners for a softer look */
-    cursor: pointer; /* Pointer cursor for interactivity */
-    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transitions on hover */
+    z-index: 950; /* Below navbar but above sidebar */
+    background-color: #f4f4f4; /* Matches sidebar background */
+    color: #444; /* Matches sidebar text */
+    border: 2px solid lightgray;
+    padding: 4px 5px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth hover effects */
 }
 
-/* Change color on hover */
+/* Toggle Button: Hover Effect */
 .toggle-btn:hover {
-    background-color: #ccc; /* Slightly darker background on hover */
-    color: #222; /* Darker font color for hover effect */
+    background-color: #ccc; /* Darker background on hover */
+    color: #222; /* Darker text color on hover */
 }
 
-/* Chat panel adjusts for the sidebar */
+/* Toggle Button Adjusted for Closed Sidebar */
+.toggle-btn.sidebar-closed {
+    left: 15px; /* Maintain original position */
+}
+
+/* Chat Interface: Proper alignment with sidebar */
 .chat-interface {
-    margin-left: 250px; /* Default shift for open sidebar */
+    margin-left: 250px; /* Default margin for open sidebar */
+    margin-top: 60px; /* Below the fixed navbar */
     padding: 20px;
     background-color: #ffffff;
-    transition: margin-left 0.3s ease-in-out; /* Smooth animation */
     flex-grow: 1;
+    z-index: 800; /* Below both navbar and toggle button */
+    transition: margin-left 0.3s ease-in-out; /* Smooth animation */
 }
 
 #chat-content {
@@ -107,6 +154,12 @@ h2 {
     margin-bottom: 10px;
     border: 1px solid #ddd;
     padding: 10px;
+}
+
+/* Chat Interface Adjusted for Closed Sidebar */
+.chat-interface.sidebar-closed {
+    margin-left: 0; /* Expand chat to full width */
+    transition: margin-left 0.3s ease-in-out; /* Smooth transition */
 }
 
 #loading-indicator {
@@ -223,4 +276,167 @@ button:disabled {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Adding new home page styles */
+.home-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 20px;
+}
+
+.home-content {
+    text-align: center;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: 90%;
+}
+
+.home-content h1 {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.tagline {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 40px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #2ecc71;
+    color: white;
+}
+
+/* Auth modal styles */
+.auth-modal {
+    max-width: 400px;
+    width: 90%;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+    .home-content {
+        padding: 30px 20px;
+    }
+
+    .home-content h1 {
+        font-size: 2rem;
+    }
+
+    .auth-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+
+.plans-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.plans-container {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 20px; /* Space between cards */
+   justify-content: center; /* Center-align cards */
+}
+
+.plan {
+   border: 1px solid #ddd;
+   padding: 20px;
+   border-radius: 8px;
+   width: 300px;
+   text-align: center;
+   background-color: #f9f9f9;
+   display: flex;
+   flex-direction: column;
+   justify-content: space-between;
+}
+
+.plan h2 {
+   margin-bottom: 10px;
+}
+
+.plan p {
+   margin: 5px 0;
+}
+
+.plan .btn {
+   margin-top: 20px; /* Adds space above the button */
+   padding: 10px 20px;
+   background-color: #007bff;
+   color: #fff;
+   text-decoration: none;
+   border-radius: 4px;
+}
+
+.plan .btn:hover {
+   background-color: #0056b3;
 }

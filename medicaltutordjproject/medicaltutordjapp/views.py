@@ -1,11 +1,17 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 
 from pathlib import Path
 from urllib.parse import unquote 
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
+from medicaltutordjapp.models import Plans
+
 from openai import OpenAI
 
 import json
@@ -13,10 +19,59 @@ import openai
 
 client = OpenAI(api_key='')
 
-# Create your views here.
+def home(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+    return render(request, "medicaltutordjapp/home.html")
 
-def chat(request):
+def signup(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        try:
+            # Create user with email as username
+            user = User.objects.create_user(username=email, email=email, password=password)
+            user.first_name = name
+            user.save()
+            
+            # Log the user in
+            login(request, user)
+            return redirect('chat')
+            
+        except IntegrityError:
+            return redirect('/?error=' + 'El correo electrónico ya está registrado')
+        except Exception as e:
+            return redirect('/?error=' + str(e))
     
+    return redirect('home')
+
+def login_view(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        user = authenticate(username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('chat')
+        else:
+            return redirect('/?error=' + 'Correo electrónico o contraseña incorrectos')
+    
+    return redirect('home')
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect('home')
+
+def plans(request):
+    all_plans = Plans.objects.all()
+    return render(request, 'medicaltutordjapp/plans.html', {'plans': all_plans})
+
+@login_required
+def chat(request):
     return render(request, "medicaltutordjapp/chat.html")
 
 @require_GET
@@ -242,10 +297,3 @@ def qualified_answers(request):
         'results': results,
         'questions': questions
     })
-
-
-
-
-
-
-

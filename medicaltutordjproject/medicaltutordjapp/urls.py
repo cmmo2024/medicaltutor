@@ -13,5 +13,6 @@ urlpatterns = [
     path('generate_questions/', views.generate_questions, name='generate_questions'),
     path('questions/', views.questions, name='questions'),
     path('qualify_answers/', views.qualify_answers, name='qualify_answers'),
-    path('qualified_answers/', views.qualified_answers, name='qualified_answers')
+    path('qualified_answers/', views.qualified_answers, name='qualified_answers'),
+    path('statistics/', views.statistics, name='statistics')
 ]

@@ -16,6 +16,7 @@
       <div class="navbar">
           {% if user.is_authenticated %}
               <p>Bienvenido, {{ user.first_name }} ({{ user.email }})</p>
+              <a href="{% url 'statistics' %}" class="btn btn-primary">Estadísticas</a>
               <p>Plan actual: {{ user.profile.plan.plan_name|default:"Plan Gratis" }}</p>
               <a href="{% url 'plans' %}" class="btn btn-danger">Planes</a>
               <a href="{% url 'logout' %}" class="btn btn-danger">Cerrar sesión</a>

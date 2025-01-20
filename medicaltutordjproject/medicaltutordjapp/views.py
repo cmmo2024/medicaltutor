@@ -10,8 +10,9 @@ from django.db import IntegrityError
 
 from pathlib import Path
 from urllib.parse import unquote 
+from datetime import datetime
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
-from medicaltutordjapp.models import Plan
+from medicaltutordjapp.models import Plan, Quizzes, UserStats
 
 from openai import OpenAI
 
@@ -242,11 +243,10 @@ def questions(request):
 def qualify_answers(request):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
-            # Parse user answers from the request
+            # Existing qualification logic...
             data = json.loads(request.body)
             user_answers = {key: value for key, value in data.items() if key.startswith('q')}
 
-            # Directory path and filename handling
             directory_path = Path('../medicaltutordjproject/medicaltutordjapp/tempfiles')
             filename = ""
             if directory_path.exists() and directory_path.is_dir():
@@ -260,35 +260,52 @@ def qualify_answers(request):
             if not filename:
                 return JsonResponse({'error': 'No file found in directory'}, status=404)
 
-            # Initialize the GIFT parser
             gift_parser = gisfttohtml(f'../medicaltutordjproject/medicaltutordjapp/tempfiles/{filename}')
-
-            # Qualify answers using gift_parser's method, which handles all logic
             results = gift_parser.qualify_answers(user_answers)
             questions = {str(idx): question.text for idx, question in enumerate(gift_parser.questions(), 1)}
 
-            # Add user_answer to results for each question
             for question_id, result in results.items():
                 user_answer = user_answers.get(f"q{question_id}", "No answer")
-                # Handle cases where user_answer is a list
                 if isinstance(user_answer, list):
                     result['user_answer'] = ", ".join(user_answer)
                 else:
                     result['user_answer'] = user_answer.strip()
 
-            # Calculate the total score based on correct answers
             correct_answers = sum(1 for result in results.values() if result['result'])
             total_possible_score = len(results)
             total_score = max(2, (correct_answers * 5) // total_possible_score) if total_possible_score > 0 else 2
 
-            # Return the JSON response with total score, results, and question texts
-            return JsonResponse({'total_score': total_score, 'result': results, 'questions': questions})
+            # Update user statistics
+            if request.user.is_authenticated:
+                # Create or update quiz record
+                quiz = Quizzes.objects.create(
+                    user=request.user,
+                    topic=request.session.get('current_topic', 'Unknown'),
+                    matter=request.session.get('current_subject', 'Unknown'),
+                    questions_count=total_possible_score,
+                    score=total_score,
+                    created_at=datetime.now()
+                )
+
+                # Update user stats
+                user_stats, created = UserStats.objects.get_or_create(user=request.user)
+                user_stats.total_quizzes = Quizzes.objects.filter(user=request.user).count()
+                user_stats.last_activity = datetime.now()
+                
+                # Calculate new average score
+                all_scores = Quizzes.objects.filter(user=request.user).values_list('score', flat=True)
+                user_stats.average_score = sum(all_scores) / len(all_scores) if all_scores else 0
+                user_stats.save()
+
+            return JsonResponse({
+                'total_score': total_score,
+                'result': results,
+                'questions': questions
+            })
 
         except json.JSONDecodeError:
-            #print("Error parsing JSON data:", e)
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         except Exception as e:
-            #print("Error during qualification:", e)
             return JsonResponse({'error': 'Error during qualification', 'details': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -311,4 +328,17 @@ def qualified_answers(request):
         'score': score,
         'results': results,
         'questions': questions
+    })
+
+@login_required
+def statistics(request):
+    # Get user stats
+    user_stats, created = UserStats.objects.get_or_create(user=request.user)
+    
+    # Get the 10 most recent quizzes for the user
+    recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
+    
+    return render(request, 'medicaltutordjapp/statistics.html', {
+        'user_stats': user_stats,
+        'recent_quizzes': recent_quizzes
     })

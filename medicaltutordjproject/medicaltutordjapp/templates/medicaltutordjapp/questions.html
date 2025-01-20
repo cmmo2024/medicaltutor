@@ -5,35 +5,61 @@
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
                             <title>Cuestionario</title>
                             {% load static %}
-                            <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+                            <link rel="stylesheet" href="{% static 'css/common.css' %}"
+                            <link rel="stylesheet" href="{% static 'css/questions.css' %}">
                         </head>
 <body>
 <form id="questions-form" action="/qualify_answers/" method="POST">
 {% csrf_token %}
-<h3>1. ¿Qué término describe la característica fundamental que define a todos los seres vivos en términos de su composición?</h3>
-<input type="text" name="q1" value=""><br>
-<h3>2. ¿Cuál de las siguientes opciones NO es considerada una forma básica de la vida en la actualidad?</h3>
-<p>2. ¿Cuál de las siguientes opciones NO es considerada una forma básica de la vida en la actualidad? <select name="q2"><option value="" disabled selected>Select an answer</option><option value="Bacterias">Bacterias</option><option value="Hongos">Hongos</option><option value="Máquinas">Máquinas</option></select>
-</p>
-<h3>3. ¿Cuál es el concepto que explica la diversidad de la vida a lo largo del tiempo a través de cambios en los organismos?</h3>
+<h3>1. ¿Qué moléculas son el foco principal de estudio en la biología molecular?</h3>
 
                             <label>
-                                <input type="radio" name="q3" value="Evolución de la vida">
-                                Evolución de la vida
+                                <input type="radio" name="q1" value="Ácidos nucleicos y proteínas">
+                                Ácidos nucleicos y proteínas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Origen de la vida">
-                                Origen de la vida
+                                <input type="radio" name="q1" value="Carbohidratos y lípidos">
+                                Carbohidratos y lípidos
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Unidad molecular">
-                                Unidad molecular
+                                <input type="radio" name="q1" value="Vitaminas y minerales">
+                                Vitaminas y minerales
                             </label><br>
                         
+<h3>2. ¿Cuál de las siguientes técnicas revolucionó la biología molecular al permitir la amplificación de fragmentos de ADN?</h3>
+
+                            <label>
+                                <input type="radio" name="q2" value="La reacción en cadena de la polimerasa (PCR)">
+                                La reacción en cadena de la polimerasa (PCR)
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="La microscopía electrónica">
+                                La microscopía electrónica
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="La espectrometría de masas">
+                                La espectrometría de masas
+                            </label><br>
+                        
+<h3>3. La técnica de edición genética conocida como CRISPR-Cas9 es ampliamente utilizada en biología molecular.</h3>
+
+                        <label>
+                            <input type="radio" name="q3" value="T">
+                            V
+                        </label><br>
+                        <label>
+                            <input type="radio" name="q3" value="F">
+                            F
+                        </label><br>
+                    
 <!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">

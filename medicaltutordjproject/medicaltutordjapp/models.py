@@ -12,9 +12,9 @@ class UserProfile(models.Model):
 class Payment(models.Model):
     # Fields
     payment_id = models.AutoField(primary_key=True)
+    transaction_id=models.TextField()
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)  
     amount = models.FloatField()
-    card_number = models.TextField()
     payment_date = models.DateTimeField(blank=True, null=True)
     
     # Constant field for ID card receiving transactions
@@ -23,7 +23,7 @@ class Payment(models.Model):
     receiver_id_card = models.CharField(
         max_length=20, 
         default=RECEIVER_ID_CARD, 
-        editable=False
+        editable=True
     )
 
     class Meta:
@@ -43,7 +43,7 @@ class Plan(models.Model):
     max_quizzes_per_month = models.IntegerField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'plans'
 
 

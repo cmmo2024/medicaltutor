@@ -9,5 +9,5 @@ class PlansAdmin(admin.ModelAdmin):
     
 @admin.register(Payment)
 class PaymentsAdmin(admin.ModelAdmin):
-    list_display = ('payment_id', 'user', 'amount', 'payment_date', 'receiver_id_card')
-    readonly_fields = ('payment_date', 'receiver_id_card')
+    list_display = ('payment_id', 'transaction_id', 'user', 'amount', 'payment_date')
+    readonly_fields = ('payment_date',)

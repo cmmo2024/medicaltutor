@@ -1,10 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db import IntegrityError
 
 from pathlib import Path
@@ -69,6 +70,20 @@ def logout_view(request):
 def plans(request):
     all_plans = Plan.objects.all()
     return render(request, 'medicaltutordjapp/plans.html', {'plans': all_plans})
+
+def subscribe(request, plan_id):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    plan = get_object_or_404(Plan, pk=plan_id)
+    user = request.user
+    
+    # Update user's subscription plan
+    user.plan = plan
+    user.save()
+    
+    messages.success(request, f"Te has suscrito al plan {plan.plan_name} exitosamente.")
+    return redirect('plans')
 
 @login_required
 def chat(request):

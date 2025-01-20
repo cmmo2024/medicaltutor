@@ -6,12 +6,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Show the question dialog for retrying
     document.getElementById("retry-button").addEventListener("click", showQuestionDialog);
+    
+    var statisticsButton = document.getElementById("statistics-button");
+    statisticsButton.addEventListener("click", function () {
+        window.location.href = "/statistics/";
+    });
 });
-
-// Redirect to home if the user tries to navigate back
-//window.addEventListener("popstate", function () {
-//    window.location.href = "/";
-//});
 
 function showQuestionDialog() {
     const dialog = document.getElementById('question-dialog');

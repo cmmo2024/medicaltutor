@@ -66,12 +66,27 @@ class Quizzes(models.Model):
 
 
 class UserStats(models.Model):
-    user = models.OneToOneField(User, on_delete=models.DO_NOTHING, primary_key=True)  # Link to Django's User model
+    user = models.OneToOneField(User, on_delete=models.DO_NOTHING, primary_key=True)
     total_quizzes = models.IntegerField(blank=True, null=True)
     last_activity = models.DateTimeField(blank=True, null=True)
     average_score = models.FloatField(blank=True, null=True)
+    subject_averages = models.JSONField(default=dict, blank=True)  # Store subject averages as JSON
 
     class Meta:
         managed = True
         db_table = 'user_stats'
 
+    def update_subject_averages(self):
+        from django.db.models import Avg
+        # Calculate averages for each subject
+        subject_avgs = (Quizzes.objects
+                       .filter(user=self.user)
+                       .values('matter')
+                       .annotate(avg_score=Avg('score')))
+        
+        # Convert to dictionary format
+        self.subject_averages = {
+            item['matter']: float(item['avg_score'])
+            for item in subject_avgs
+        }
+        self.save()

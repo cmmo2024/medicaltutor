@@ -240,6 +240,26 @@ def questions(request):
     return render(request, 'medicaltutordjapp/questions.html')
 
 @csrf_exempt
+def update_session(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            subject = data.get('subject')
+            topic = data.get('topic')
+            
+            if subject and topic:
+                request.session['current_subject'] = subject
+                request.session['current_topic'] = topic
+                # Force session save
+                request.session.modified = True
+                return JsonResponse({'status': 'success'})
+            else:
+                return JsonResponse({'error': 'Missing subject or topic'}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@csrf_exempt
 def qualify_answers(request):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
@@ -295,6 +315,10 @@ def qualify_answers(request):
                 # Calculate new average score
                 all_scores = Quizzes.objects.filter(user=request.user).values_list('score', flat=True)
                 user_stats.average_score = sum(all_scores) / len(all_scores) if all_scores else 0
+                
+                # Update subject averages
+                user_stats.update_subject_averages()
+                
                 user_stats.save()
 
             return JsonResponse({
@@ -309,6 +333,26 @@ def qualify_answers(request):
             return JsonResponse({'error': 'Error during qualification', 'details': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def statistics(request):
+    # Get user stats
+    user_stats, created = UserStats.objects.get_or_create(user=request.user)
+    
+    # Get the 10 most recent quizzes for the user
+    recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
+    
+    # Get subject averages from UserStats
+    subject_averages = [
+        {'matter': subject, 'avg_score': score}
+        for subject, score in user_stats.subject_averages.items()
+    ]
+    
+    return render(request, 'medicaltutordjapp/statistics.html', {
+        'user_stats': user_stats,
+        'recent_quizzes': recent_quizzes,
+        'subject_averages': subject_averages
+    })
 
 def qualified_answers(request):
     score = request.GET.get('score', 0)
@@ -330,15 +374,15 @@ def qualified_answers(request):
         'questions': questions
     })
 
-@login_required
-def statistics(request):
-    # Get user stats
-    user_stats, created = UserStats.objects.get_or_create(user=request.user)
+# @login_required
+# def statistics(request):
+#     # Get user stats
+#     user_stats, created = UserStats.objects.get_or_create(user=request.user)
     
-    # Get the 10 most recent quizzes for the user
-    recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
+#     # Get the 10 most recent quizzes for the user
+#     recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
     
-    return render(request, 'medicaltutordjapp/statistics.html', {
-        'user_stats': user_stats,
-        'recent_quizzes': recent_quizzes
-    })
+#     return render(request, 'medicaltutordjapp/statistics.html', {
+#         'user_stats': user_stats,
+#         'recent_quizzes': recent_quizzes
+#     })

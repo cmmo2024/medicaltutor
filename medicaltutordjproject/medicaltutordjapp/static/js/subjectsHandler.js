@@ -5,15 +5,29 @@ let selectedSubject = "";
 let isTopicSelected = false;
 let hasGPTResponded = false;
 
+// Get CSRF token from cookies
+function getCSRFToken() {
+    const name = 'csrftoken';
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 // Accordion functionality
 document.addEventListener("DOMContentLoaded", function () {
     var acc = document.getElementsByClassName("accordion");
     for (var i = 0; i < acc.length; i++) {
         acc[i].addEventListener("click", function () {
-            // Toggle active class for the accordion button
             this.classList.toggle("active");
-
-            // Toggle display of the associated panel
             var panel = this.nextElementSibling;
             if (panel.style.display === "block") {
                 panel.style.display = "none";
@@ -21,6 +35,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 panel.style.display = "block";
             }
         });
+    }
+
+    // Load saved subject and topic if they exist
+    const savedSubject = localStorage.getItem('selectedSubject');
+    const savedTopic = localStorage.getItem('selectedTopic');
+    
+    if (savedSubject && savedTopic) {
+        selectedSubject = savedSubject;
+        updateSessionData(savedSubject, savedTopic);
     }
 });
 
@@ -34,6 +57,32 @@ function selectSubject(element) {
 
     // Update the selected subject
     selectedSubject = element.getAttribute('data-subject');
+    
+    // Store the selected subject in localStorage
+    localStorage.setItem('selectedSubject', selectedSubject);
+}
+
+function updateSessionData(subject, topic) {
+    fetch('/update_session/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            subject: subject,
+            topic: topic
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.status === 'success') {
+            console.error('Failed to update session data');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating session:', error);
+    });
 }
 
 function loadTopic(topic) {
@@ -52,6 +101,9 @@ function loadTopic(topic) {
 
     isTopicSelected = true;
     hasGPTResponded = false;
+    
+    // Update session data with current subject and topic
+    updateSessionData(selectedSubject, topic);
 }
 
 // Function to show plan upgrade message
@@ -250,15 +302,9 @@ function generateQuestions(numQuestions) {
         alert('An error occurred while generating questions. Please try again later.');
     })
     .finally(() => {
-        // Hide the loading dialog regardless of success or failure .finally(() => {
         // Hide the loading dialog regardless of success or failure
         document.getElementById('loading-dialog').style.display = 'none';
     });
-}
-
-// Helper to get CSRF token
-function getCSRFToken() {
-    return document.cookie.split('; ').find(row => row.startsWith('csrftoken')).split('=')[1];
 }
 
 function shareChatContent() {

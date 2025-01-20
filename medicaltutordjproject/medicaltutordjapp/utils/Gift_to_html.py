@@ -188,7 +188,7 @@ class gisfttohtml(object):
         html_output.append('''<!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">
-                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez clificado ¡Revisa bien!</p>
+                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez calificado ¡Revisa bien!</p>
                 <input type="submit" value="Calificar">
                 <button onclick="closeDialog()" type="button">Seguir revisando</button>
             </div>

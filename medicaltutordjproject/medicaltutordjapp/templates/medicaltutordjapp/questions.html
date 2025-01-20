@@ -11,59 +11,67 @@
 <body>
 <form id="questions-form" action="/qualify_answers/" method="POST">
 {% csrf_token %}
-<h3>1. ¿Qué moléculas son el foco principal de estudio en la biología molecular?</h3>
+<h3>1. ¿Qué estructura fundamental comprenderás al estudiar la función del ADN en este curso?</h3>
 
                             <label>
-                                <input type="radio" name="q1" value="Ácidos nucleicos y proteínas">
-                                Ácidos nucleicos y proteínas
+                                <input type="radio" name="q1" value="Doble hélice">
+                                Doble hélice
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Carbohidratos y lípidos">
-                                Carbohidratos y lípidos
+                                <input type="radio" name="q1" value="Cadena sencilla">
+                                Cadena sencilla
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Vitaminas y minerales">
-                                Vitaminas y minerales
+                                <input type="radio" name="q1" value="Triple hélice">
+                                Triple hélice
                             </label><br>
                         
-<h3>2. ¿Cuál de las siguientes técnicas revolucionó la biología molecular al permitir la amplificación de fragmentos de ADN?</h3>
+<h3>2. ¿Qué proceso estudia la transformación de información genética en proteínas, involucrando ARN, dentro de la asignatura?</h3>
 
                             <label>
-                                <input type="radio" name="q2" value="La reacción en cadena de la polimerasa (PCR)">
-                                La reacción en cadena de la polimerasa (PCR)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="La microscopía electrónica">
-                                La microscopía electrónica
+                                <input type="radio" name="q2" value="Expresión génica">
+                                Expresión génica
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q2" value="La espectrometría de masas">
-                                La espectrometría de masas
+                                <input type="radio" name="q2" value="Mutación genética">
+                                Mutación genética
                             </label><br>
                         
-<h3>3. La técnica de edición genética conocida como CRISPR-Cas9 es ampliamente utilizada en biología molecular.</h3>
 
-                        <label>
-                            <input type="radio" name="q3" value="T">
-                            V
-                        </label><br>
-                        <label>
-                            <input type="radio" name="q3" value="F">
-                            F
-                        </label><br>
-                    
+                            <label>
+                                <input type="radio" name="q2" value="Transducción de señales">
+                                Transducción de señales
+                            </label><br>
+                        
+<h3>3. ¿Qué técnica molecular moderna se aprenderá en Introducción a la Biología Molecular para editar genes?</h3>
+
+                            <label>
+                                <input type="radio" name="q3" value="CRISPR-Cas9">
+                                CRISPR-Cas9
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q3" value="Electroforesis">
+                                Electroforesis
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q3" value="Microscopía electrónica">
+                                Microscopía electrónica
+                            </label><br>
+                        
 <!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">
-                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez clificado ¡Revisa bien!</p>
+                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez calificado ¡Revisa bien!</p>
                 <input type="submit" value="Calificar">
                 <button onclick="closeDialog()" type="button">Seguir revisando</button>
             </div>

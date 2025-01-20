@@ -1,3 +1,4 @@
+// Add this at the beginning of your file
 let selectedSubject = "";
 
 // Track whether a topic is selected and whether GPT has responded at least once
@@ -24,7 +25,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function selectSubject(element) {
-
     // Remove "active" class from all subjects
     const allSubjects = document.querySelectorAll('.sidebar .accordion');
     allSubjects.forEach(subject => subject.classList.remove('active'));
@@ -37,7 +37,6 @@ function selectSubject(element) {
 }
 
 function loadTopic(topic) {
-
     const chatContent = document.getElementById('chat-content');
     
     localStorage.setItem('selectedTopic', topic);
@@ -53,6 +52,16 @@ function loadTopic(topic) {
 
     isTopicSelected = true;
     hasGPTResponded = false;
+}
+
+// Function to show plan upgrade message
+function showPlanUpgradeMessage() {
+    document.getElementById('plan-upgrade-dialog').style.display = 'block';
+}
+
+// Function to close plan upgrade dialog
+function closePlanUpgradeDialog() {
+    document.getElementById('plan-upgrade-dialog').style.display = 'none';
 }
 
 // Toggle sidebar navigation
@@ -149,7 +158,6 @@ function saveConversation(chatContent) {
 }
 
 function clearChat() {
-
     document.getElementById('topic-title').innerText = "Seleccione un tema para repasar";
     document.getElementById('chat-content').innerHTML = "";
     localStorage.removeItem("chatConversation");
@@ -242,6 +250,7 @@ function generateQuestions(numQuestions) {
         alert('An error occurred while generating questions. Please try again later.');
     })
     .finally(() => {
+        // Hide the loading dialog regardless of success or failure .finally(() => {
         // Hide the loading dialog regardless of success or failure
         document.getElementById('loading-dialog').style.display = 'none';
     });
@@ -298,10 +307,8 @@ document.addEventListener('DOMContentLoaded', loadSharedChat);
 
 // Disable input and buttons by default until a topic is selected
 window.onload = function () {
-    
     document.getElementById('topic-title').innerText = localStorage.getItem('selectedTopic');
-
-    loadConversation()
+    loadConversation();
     
     document.getElementById('user-input').disabled = false;
     document.getElementById('send-button').disabled = false;

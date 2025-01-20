@@ -110,6 +110,17 @@ h2 {
     color: #0073e6;
 }
 
+/* Locked topic styles */
+.panel li.locked {
+    color: #999;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.panel li.locked:hover {
+    color: #666;
+}
+
 /* Toggle button styles */
 .toggle-btn {
     position: fixed;
@@ -214,4 +225,34 @@ h2 {
     padding: 10px;
     border-radius: 5px;
     overflow-x: auto;
+}
+
+/* Plan upgrade dialog styles */
+#plan-upgrade-dialog .modal-content {
+    max-width: 400px;
+    text-align: center;
+}
+
+#plan-upgrade-dialog h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+#plan-upgrade-dialog p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+#plan-upgrade-dialog .btn {
+    margin: 5px;
+    padding: 8px 20px;
+}
+
+#plan-upgrade-dialog .btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+#plan-upgrade-dialog .btn-primary:hover {
+    background-color: #0056b3;
 }

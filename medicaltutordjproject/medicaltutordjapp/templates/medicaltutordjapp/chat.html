@@ -16,7 +16,7 @@
       <div class="navbar">
           {% if user.is_authenticated %}
               <p>Bienvenido, {{ user.first_name }} ({{ user.email }})</p>
-              <p>Plan actual: {{ user.profile.plan.plan_name }}</p>
+              <p>Plan actual: {{ user.profile.plan.plan_name|default:"Plan Gratis" }}</p>
               <a href="{% url 'plans' %}" class="btn btn-danger">Planes</a>
               <a href="{% url 'logout' %}" class="btn btn-danger">Cerrar sesión</a>
           {% endif %}
@@ -33,37 +33,68 @@
 
             <ul class="panel">
                 <li onclick="loadTopic('Introducción a la Biología Molecular')">Introducción a la Biología Molecular</li>
-                <li onclick="loadTopic('Macromoléculas')">Macromoléculas</li>
-                <li onclick="loadTopic('Precursores de polisacáridos')">Precursores de polisacáridos</li>
-                <li onclick="loadTopic('Polisacáridos')">Polisacáridos</li>
-                <li onclick="loadTopic('Precursores de ácidos nucleicos')">Precursores de ácidos nucleicos</li>
-                <li onclick="loadTopic('Ácidos nucleicos')">Ácidos nucleicos</li>
-                <li onclick="loadTopic('Precursores de proteínas')">Precursores de proteínas</li>
-                <li onclick="loadTopic('Proteínas')">Proteínas</li>
-                <li onclick="loadTopic('Biocatalizadores')">Biocatalizadores</li>
-                <li onclick="loadTopic('Enzimas')">Enzimas</li>
-                <li onclick="loadTopic('Cinética enzimática')">Cinética enzimática</li>
-                <li onclick="loadTopic('Membranas biológicas')">Membranas biológicas</li>
-                <li onclick="loadTopic('Complejos multimoleculares')">Complejos multimoleculares</li>
-                <li onclick="loadTopic('Ciclo celular')">Ciclo celular</li>
-                <li onclick="loadTopic('Organización del genoma eucarionte')">Organización del genoma eucarionte</li>
-                <li onclick="loadTopic('Replicación del ADN')">Replicación del ADN</li>
-                <li onclick="loadTopic('Transcripción genética')">Transcripción genética</li>
-                <li onclick="loadTopic('Traducción genética')">Traducción genética</li>
-                <li onclick="loadTopic('Estudio comparativo de los procesos de la genética molecular. Mutaciones génicas')">Mutaciones génicas</li>
+                {% if user.profile.has_paid_plan %}
+                    <li onclick="loadTopic('Macromoléculas')">Macromoléculas</li>
+                    <li onclick="loadTopic('Precursores de polisacáridos')">Precursores de polisacáridos</li>
+                    <li onclick="loadTopic('Polisacáridos')">Polisacáridos</li>
+                    <li onclick="loadTopic('Precursores de ácidos nucleicos')">Precursores de ácidos nucleicos</li>
+                    <li onclick="loadTopic('Ácidos nucleicos')">Ácidos nucleicos</li>
+                    <li onclick="loadTopic('Precursores de proteínas')">Precursores de proteínas</li>
+                    <li onclick="loadTopic('Proteínas')">Proteínas</li>
+                    <li onclick="loadTopic('Biocatalizadores')">Biocatalizadores</li>
+                    <li onclick="loadTopic('Enzimas')">Enzimas</li>
+                    <li onclick="loadTopic('Cinética enzimática')">Cinética enzimática</li>
+                    <li onclick="loadTopic('Membranas biológicas')">Membranas biológicas</li>
+                    <li onclick="loadTopic('Complejos multimoleculares')">Complejos multimoleculares</li>
+                    <li onclick="loadTopic('Ciclo celular')">Ciclo celular</li>
+                    <li onclick="loadTopic('Organización del genoma eucarionte')">Organización del genoma eucarionte</li>
+                    <li onclick="loadTopic('Replicación del ADN')">Replicación del ADN</li>
+                    <li onclick="loadTopic('Transcripción genética')">Transcripción genética</li>
+                    <li onclick="loadTopic('Traducción genética')">Traducción genética</li>
+                    <li onclick="loadTopic('Estudio comparativo de los procesos de la genética molecular. Mutaciones génicas')">Mutaciones génicas</li>
+                {% else %}
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Macromoléculas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de polisacáridos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Polisacáridos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de ácidos nucleicos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Ácidos nucleicos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de proteínas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Proteínas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Biocatalizadores 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Enzimas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Cinética enzimática 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Membranas biológicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Complejos multimoleculares 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Ciclo celular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Organización del genoma eucarionte 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Replicación del ADN 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Transcripción genética 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Traducción genética 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Mutaciones génicas 🔒</li>
+                {% endif %}
             </ul>
             
             <!-- Metabolismo y Nutrición Accordion -->
             <button class="accordion" data-subject="Metabolismo y Nutrición" onclick="selectSubject(this)">Metabolismo y Nutrición</button>
             <ul class="panel">
                 <li onclick="loadTopic('Introducción al Metabolismo')">Introducción al Metabolismo</li>
-                <li onclick="loadTopic('Respiración celular')">Respiración celular</li>
-                <li onclick="loadTopic('Metabolismo de los glúcidos')">Metabolismo de los glúcidos</li>
-                <li onclick="loadTopic('Metabolismo de los lípidos')">Metabolismo de los lípidos</li>
-                <li onclick="loadTopic('Metabolismo de los compuestos nitrogenados de bajo peso molecular')">Metabolismo de los compuestos nitrogenados de bajo peso molecular</li>
-                <li onclick="loadTopic('Integración y regulación metabólicas')">Integración y regulación metabólicas</li>
-                <li onclick="loadTopic('Adaptaciones metabólicas en condiciones específicas')">Adaptaciones metabólicas en condiciones específicas</li>
-                <li onclick="loadTopic('Bases moleculares de la nutrición humana')">Bases moleculares de la nutrición humana</li>
+                {% if user.profile.has_paid_plan %}
+                    <li onclick="loadTopic('Respiración celular')">Respiración celular</li>
+                    <li onclick="loadTopic('Metabolismo de los glúcidos')">Metabolismo de los glúcidos</li>
+                    <li onclick="loadTopic('Metabolismo de los lípidos')">Metabolismo de los lípidos</li>
+                    <li onclick="loadTopic('Metabolismo de los compuestos nitrogenados de bajo peso molecular')">Metabolismo de los compuestos nitrogenados de bajo peso molecular</li>
+                    <li onclick="loadTopic('Integración y regulación metabólicas')">Integración y regulación metabólicas</li>
+                    <li onclick="loadTopic('Adaptaciones metabólicas en condiciones específicas')">Adaptaciones metabólicas en condiciones específicas</li>
+                    <li onclick="loadTopic('Bases moleculares de la nutrición humana')">Bases moleculares de la nutrición humana</li>
+                {% else %}
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Respiración celular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los glúcidos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los lípidos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los compuestos nitrogenados de bajo peso molecular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Integración y regulación metabólicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Adaptaciones metabólicas en condiciones específicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Bases moleculares de la nutrición humana 🔒</li>
+                {% endif %}
             </ul>
         </div>
 
@@ -126,12 +157,23 @@
             </div>
         </div>
         
-                <!-- Loading Dialog -->
+        <!-- Loading Dialog -->
         <div id="loading-dialog" class="modal" style="display: none;">
             <div class="modal-content">
                 <h3>Generando preguntas...</h3>
                 <p>Espere mientras preparo las preguntas.</p>
-                <div class="loading-spinner"></div> <!-- Optional: Add a spinner -->
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- Plan Upgrade Dialog -->
+        <div id="plan-upgrade-dialog" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closePlanUpgradeDialog()">&times;</span>
+                <h3>Tema Bloqueado</h3>
+                <p>Este tema está disponible solo para usuarios suscritos a un plan de pago. ¡Actualiza tu plan para acceder a todo el contenido!</p>
+                <button onclick="window.location.href='{% url 'plans' %}'" class="btn btn-primary">Ver Planes</button>
+                <button onclick="closePlanUpgradeDialog()" class="btn">Cancelar</button>
             </div>
         </div>
   

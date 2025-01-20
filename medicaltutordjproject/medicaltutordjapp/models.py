@@ -7,7 +7,11 @@ class UserProfile(models.Model):
     plan = models.ForeignKey('Plan', on_delete=models.DO_NOTHING, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.plan.plan_name if self.plan else 'No Plan'}"
+        return f"{self.user.username} - {self.plan.plan_name if self.plan else 'Free Plan'}"
+
+    @property
+    def has_paid_plan(self):
+        return self.plan is not None
 
 class Payment(models.Model):
     # Fields

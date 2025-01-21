@@ -239,6 +239,15 @@ def questions(request):
     # This view only handles GET requests to render the questions page
     return render(request, 'medicaltutordjapp/questions.html')
 
+def get_correct_subject(topic, subject_topics):
+    """Helper function to get the correct subject for a given topic"""
+    for subject, topics in subject_topics.items():
+        if topic == subject:  # If the topic is actually a subject
+            return subject
+        elif topic in topics:  # If we find the topic in a subject's topics
+            return subject
+    return 'Unknown'
+
 @csrf_exempt
 def update_session(request):
     if request.method == 'POST':
@@ -248,9 +257,16 @@ def update_session(request):
             topic = data.get('topic')
             
             if subject and topic:
-                request.session['current_subject'] = subject
+                # Load subject-topic mapping
+                with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+                    subject_topics = json.load(file)
+                
+                # Validate and get correct subject
+                correct_subject = get_correct_subject(topic, subject_topics)
+                
+                # Store the correct subject and topic in session
+                request.session['current_subject'] = correct_subject
                 request.session['current_topic'] = topic
-                # Force session save
                 request.session.modified = True
                 return JsonResponse({'status': 'success'})
             else:
@@ -263,6 +279,23 @@ def update_session(request):
 def qualify_answers(request):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
+            # Load the subject-topic mapping
+            with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+                subject_topics = json.load(file)
+
+            # Get current topic and subject from session
+            current_topic = request.session.get('current_topic', 'Unknown')
+            current_subject = request.session.get('current_subject', 'Unknown')
+
+            # Validate and get correct subject
+            correct_subject = get_correct_subject(current_topic, subject_topics)
+
+            # If we found a different subject than what was stored, update it
+            if correct_subject != current_subject:
+                current_subject = correct_subject
+                request.session['current_subject'] = current_subject
+                request.session.modified = True
+
             # Existing qualification logic...
             data = json.loads(request.body)
             user_answers = {key: value for key, value in data.items() if key.startswith('q')}
@@ -297,11 +330,11 @@ def qualify_answers(request):
 
             # Update user statistics
             if request.user.is_authenticated:
-                # Create or update quiz record
+                # Create or update quiz record with validated subject
                 quiz = Quizzes.objects.create(
                     user=request.user,
-                    topic=request.session.get('current_topic', 'Unknown'),
-                    matter=request.session.get('current_subject', 'Unknown'),
+                    topic=current_topic,
+                    matter=current_subject,
                     questions_count=total_possible_score,
                     score=total_score,
                     created_at=datetime.now()
@@ -334,26 +367,6 @@ def qualify_answers(request):
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-@login_required
-def statistics(request):
-    # Get user stats
-    user_stats, created = UserStats.objects.get_or_create(user=request.user)
-    
-    # Get the 10 most recent quizzes for the user
-    recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
-    
-    # Get subject averages from UserStats
-    subject_averages = [
-        {'matter': subject, 'avg_score': score}
-        for subject, score in user_stats.subject_averages.items()
-    ]
-    
-    return render(request, 'medicaltutordjapp/statistics.html', {
-        'user_stats': user_stats,
-        'recent_quizzes': recent_quizzes,
-        'subject_averages': subject_averages
-    })
-
 def qualified_answers(request):
     score = request.GET.get('score', 0)
     results_encoded = request.GET.get('results', '')
@@ -374,15 +387,31 @@ def qualified_answers(request):
         'questions': questions
     })
 
-# @login_required
-# def statistics(request):
-#     # Get user stats
-#     user_stats, created = UserStats.objects.get_or_create(user=request.user)
+@login_required
+def statistics(request):
+    # Get user stats
+    user_stats, created = UserStats.objects.get_or_create(user=request.user)
     
-#     # Get the 10 most recent quizzes for the user
-#     recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
+    # Get the 10 most recent quizzes for the user
+    recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
     
-#     return render(request, 'medicaltutordjapp/statistics.html', {
-#         'user_stats': user_stats,
-#         'recent_quizzes': recent_quizzes
-#     })
+    # Load subject-topic mapping to validate subjects
+    with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+        subject_topics = json.load(file)
+    
+    # Get subject averages from UserStats and validate them
+    subject_averages = []
+    for subject, score in user_stats.subject_averages.items():
+        # Only include valid subjects from our mapping
+        if subject in subject_topics:
+            subject_averages.append({
+                'matter': subject,
+                'avg_score': score
+            })
+    
+    return render(request, 'medicaltutordjapp/statistics.html', {
+        'user_stats': user_stats,
+        'recent_quizzes': recent_quizzes,
+        'subject_averages': subject_averages
+    })
+

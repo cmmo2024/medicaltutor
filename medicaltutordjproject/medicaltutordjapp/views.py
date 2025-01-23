@@ -7,14 +7,23 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import IntegrityError
+from django.core.mail import send_mail, BadHeaderError
+from django.contrib.auth.tokens import default_token_generator
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 
 from pathlib import Path
-from urllib.parse import unquote 
+
+from urllib.parse import unquote
+ 
 from datetime import datetime
-from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
-from medicaltutordjapp.models import Plan, Quizzes, UserStats
 
 from openai import OpenAI
+
+from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
+from medicaltutordjapp.models import Plan, Quizzes, UserStats
 
 import json
 import openai
@@ -67,6 +76,63 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('home')
+
+def password_reset_request(request):
+    if request.method == "POST":
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data["email"]
+            users = User.objects.filter(email=email)
+            if users.exists():
+                user = users[0]
+                subject = "Password Reset Requested"
+                email_template_name = "medicaltutordjapp/password_reset_email.html"
+                context = {
+                    "email": user.email,
+                    'domain': request.get_host(),
+                    'site_name': 'Medical Tutor',
+                    "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+                    "user": user,
+                    'token': default_token_generator.make_token(user),
+                    'protocol': 'https' if request.is_secure() else 'http',
+                }
+                email_content = render_to_string(email_template_name, context)
+                try:
+                    send_mail(subject, email_content, None, [user.email])
+                except BadHeaderError:
+                    return JsonResponse({"error": "Invalid header found."})
+                return redirect("password_reset_done")
+            else:
+                messages.error(request, "No user found with that email address.")
+    else:
+        form = PasswordResetForm()
+    return render(request, "medicaltutordjapp/password_reset.html", {"form": form})
+
+def password_reset_done(request):
+    return render(request, "medicaltutordjapp/password_reset_done.html")
+
+def password_reset_confirm(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == "POST":
+            form = SetPasswordForm(user, request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect("password_reset_complete")
+        else:
+            form = SetPasswordForm(user)
+        return render(request, "medicaltutordjapp/password_reset_confirm.html", {"form": form})
+    else:
+        messages.error(request, "The reset link is no longer valid.")
+        return redirect("home")
+
+def password_reset_complete(request):
+    return render(request, "medicaltutordjapp/password_reset_complete.html")
 
 def plans(request):
     all_plans = Plan.objects.all()

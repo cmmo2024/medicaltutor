@@ -15,5 +15,9 @@ urlpatterns = [
     path('qualify_answers/', views.qualify_answers, name='qualify_answers'),
     path('qualified_answers/', views.qualified_answers, name='qualified_answers'),
     path('statistics/', views.statistics, name='statistics'),
-    path('update_session/', views.update_session, name='update_session')
+    path('update_session/', views.update_session, name='update_session'),
+    path('password_reset/', views.password_reset_request, name='password_reset'),
+    path('password_reset/done/', views.password_reset_done, name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    path('reset/done/', views.password_reset_complete, name='password_reset_complete')
 ]

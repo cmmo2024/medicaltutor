@@ -1,50 +1,102 @@
 from django.db import models
 from django.contrib.auth.models import User  
 
-
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    stats = models.OneToOneField('UserStats', on_delete=models.CASCADE, related_name="profile", null=True)
     plan = models.ForeignKey('Plan', on_delete=models.DO_NOTHING, null=True, blank=True)
+    remaining_queries = models.IntegerField(default=0)
+    remaining_quizzes = models.IntegerField(default=0)
+    #last_subject = models.CharField(max_length=100, null=True, blank=True)
+    #last_topic = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.plan.plan_name if self.plan else 'Free Plan'}"
 
     @property
     def has_paid_plan(self):
-        return self.plan is not None
+        return self.remaining_queries > 0 or self.remaining_quizzes > 0
+
+    def update_plan(self, new_plan):
+        """Update user's plan and add the new limits to existing ones"""
+        if self.plan:
+            # Add new limits to existing ones
+            self.remaining_queries += new_plan.max_queries
+            self.remaining_quizzes += new_plan.max_quizzes
+        else:
+            # Set new limits
+            self.remaining_queries = new_plan.max_queries
+            self.remaining_quizzes = new_plan.max_quizzes
+        
+        self.plan = new_plan
+        self.save()
+
+    def decrement_queries(self):
+        """Decrement remaining queries"""
+        if self.remaining_queries > 0:
+            self.remaining_queries -= 1
+            self.save()
+            return True
+        return False
+
+    def decrement_quizzes(self):
+        """Decrement remaining quizzes and check if plan should be reset"""
+        if self.remaining_quizzes > 0:
+            self.remaining_quizzes -= 1
+            # Only reset plan if both counters are 0
+            if self.remaining_quizzes == 0 and self.remaining_queries == 0:
+                self.plan = None
+            self.save()
+            return True
+        return False
 
 class Payment(models.Model):
-    # Fields
     payment_id = models.AutoField(primary_key=True)
-    transaction_id=models.TextField()
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)  
+    transaction_id = models.TextField()  
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     amount = models.FloatField()
     payment_date = models.DateTimeField(blank=True, null=True)
-    
-    # Constant field for ID card receiving transactions
-    RECEIVER_ID_CARD = "1234567890"  # Replace with the actual ID card value
+    receiver_id_card = models.CharField(max_length=255, null=False)
 
-    receiver_id_card = models.CharField(
-        max_length=20, 
-        default=RECEIVER_ID_CARD, 
-        editable=True
-    )
+    RECEIVER_ID_CARD = '1234567890' 
 
     class Meta:
         managed = True
         db_table = 'payments'
 
     def save(self, *args, **kwargs):
-        # Ensure the constant field is set correctly
+        # Ensure the field is always set to the constant value
         self.receiver_id_card = self.RECEIVER_ID_CARD
         super().save(*args, **kwargs)
+
+        
+class Voucher(models.Model):
+    voucher_id = models.AutoField(primary_key=True)
+    transaction_id = models.TextField(unique=True)  # Make transaction_id unique
+    card_id = models.IntegerField()
+    amount = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)  # Add used field to track usage
+
+    class Meta:
+        managed = True
+        db_table = 'vouchers'
+
+    def __str__(self):
+        return f"Voucher {self.voucher_id} - {self.amount}"
+
+    def mark_as_used(self):
+        """Mark the voucher as used"""
+        self.used = True
+        self.save()
+
 
 class Plan(models.Model):
     plan_id = models.AutoField(primary_key=True)
     plan_name = models.TextField()
     price = models.FloatField()
-    max_queries_per_month = models.IntegerField(blank=True, null=True)
-    max_quizzes_per_month = models.IntegerField(blank=True, null=True)
+    max_queries = models.IntegerField(blank=True, null=True)
+    max_quizzes = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = True

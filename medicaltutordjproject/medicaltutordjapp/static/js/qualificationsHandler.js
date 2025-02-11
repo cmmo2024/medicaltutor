@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // Show the question dialog for retrying
-    document.getElementById("retry-button").addEventListener("click", showQuestionDialog);
+    document.getElementById("retry-button").addEventListener("click", checkQuizLimit);
     
     var statisticsButton = document.getElementById("statistics-button");
     statisticsButton.addEventListener("click", function () {
@@ -13,10 +13,27 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+function checkQuizLimit() {
+    // Check if user has remaining quizzes
+    fetch('/check_quiz_limit/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.can_take_quiz) {
+                showQuestionDialog();
+            } else {
+                showPlanUpgradeDialog();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking quiz limit:', error);
+            alert('Error al verificar el límite de cuestionarios. Por favor intente nuevamente.');
+        });
+}
+
 function showQuestionDialog() {
     const dialog = document.getElementById('question-dialog');
     if (dialog) {
-        dialog.style.display = 'block'; // Show the modal
+        dialog.style.display = 'block';
     } else {
         console.error('Modal dialog not found');
     }
@@ -25,9 +42,27 @@ function showQuestionDialog() {
 function closeQuestionDialog() {
     const dialog = document.getElementById('question-dialog');
     if (dialog) {
-        dialog.style.display = 'none'; // Hide the modal
+        dialog.style.display = 'none';
     } else {
         console.error('Modal dialog not found');
+    }
+}
+
+function showPlanUpgradeDialog() {
+    const dialog = document.getElementById('plan-upgrade-dialog');
+    if (dialog) {
+        dialog.style.display = 'block';
+    } else {
+        console.error('Plan upgrade dialog not found');
+    }
+}
+
+function closePlanUpgradeDialog() {
+    const dialog = document.getElementById('plan-upgrade-dialog');
+    if (dialog) {
+        dialog.style.display = 'none';
+    } else {
+        console.error('Plan upgrade dialog not found');
     }
 }
 
@@ -48,16 +83,16 @@ function continueToNextPage() {
             console.error('Loading dialog not found');
         }
 
-        generateQuestions(numQuestions); // Call your generateQuestions method
+        generateQuestions(numQuestions);
     } else {
         alert('Por favor selecciona el número de preguntas.');
     }
 }
 
 function generateQuestions(numQuestions) {
-    const topic = localStorage.getItem('selectedTopic') || 'General'; // Default to 'General' if not found
+    const topic = localStorage.getItem('selectedTopic') || 'General';
 
-    fetch(`/generate_questions/`, { // Use the generate endpoint for POST
+    fetch(`/generate_questions/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -66,7 +101,7 @@ function generateQuestions(numQuestions) {
         body: JSON.stringify({
             topic,
             numQuestions,
-            conversation: '' // Pass the conversation if needed
+            conversation: ''
         })
     })
     .then(response => {
@@ -77,7 +112,6 @@ function generateQuestions(numQuestions) {
     })
     .then(data => {
         if (data.redirect_url) {
-            // Redirect to the questions page
             window.location.href = data.redirect_url;
         } else if (data.error) {
             alert(`Error: ${data.error}`);
@@ -90,7 +124,6 @@ function generateQuestions(numQuestions) {
         alert('Ocurrió un error al generar preguntas. Por favor, inténtelo nuevamente más tarde.');
     })
     .finally(() => {
-        // Hide the loading dialog regardless of success or failure
         const loadingDialog = document.getElementById('loading-dialog');
         if (loadingDialog) {
             loadingDialog.style.display = 'none';
@@ -101,5 +134,5 @@ function generateQuestions(numQuestions) {
 // Helper to get CSRF token
 function getCSRFToken() {
     const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken'));
-    return cookie ? cookie.split('=')[1] : null; // Ensure no errors if csrftoken is missing
+    return cookie ? cookie.split('=')[1] : null;
 }

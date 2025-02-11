@@ -1,6 +1,7 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
@@ -13,8 +14,8 @@ from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
-
-from pathlib import Path
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
 
 from urllib.parse import unquote
  
@@ -23,12 +24,14 @@ from datetime import datetime
 from openai import OpenAI
 
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
-from medicaltutordjapp.models import Plan, Quizzes, UserStats
+from medicaltutordjapp.models import Plan, Quizzes, UserStats, Payment, Voucher
+
+from math import floor
 
 import json
-import openai
+import urllib
 
-client = OpenAI(api_key='')
+client = OpenAI(api_key='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', base_url="https://openrouter.ai/api/v1")
 
 def home(request):
     if request.user.is_authenticated:
@@ -58,6 +61,17 @@ def signup(request):
     
     return redirect('home')
 
+@receiver(user_logged_in)
+def on_user_login(sender, user, request, **kwargs):
+    """
+    Signal handler to restore user's session data when they log in
+    """
+    # Restore last active subject and topic if they exist in the user's profile
+    if hasattr(user, 'profile'):
+        request.session['current_subject'] = getattr(user.profile, 'last_subject', None)
+        request.session['current_topic'] = getattr(user.profile, 'last_topic', None)
+        request.session.modified = True
+
 def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -66,6 +80,13 @@ def login_view(request):
         user = authenticate(username=email, password=password)
         if user is not None:
             login(request, user)
+            
+            # Restore session data
+            if 'current_subject' in request.session:
+                request.session['restored_subject'] = request.session['current_subject']
+            if 'current_topic' in request.session:
+                request.session['restored_topic'] = request.session['current_topic']
+            
             return redirect('chat')
         else:
             return redirect('/?error=' + 'Correo electrónico o contraseña incorrectos')
@@ -74,6 +95,12 @@ def login_view(request):
 
 @login_required
 def logout_view(request):
+    # Save current session data to user profile before logging out
+    if request.user.is_authenticated and hasattr(request.user, 'profile'):
+        request.user.profile.last_subject = request.session.get('current_subject')
+        request.user.profile.last_topic = request.session.get('current_topic')
+        request.user.profile.save()
+    
     logout(request)
     return redirect('home')
 
@@ -86,7 +113,7 @@ def password_reset_request(request):
             if users.exists():
                 user = users[0]
                 subject = "Password Reset Requested"
-                email_template_name = "medicaltutordjapp/password_reset_email.html"
+                email_template_name = "medicaltutordjapp/password_reset/password_reset_email.html"
                 context = {
                     "email": user.email,
                     'domain': request.get_host(),
@@ -106,10 +133,10 @@ def password_reset_request(request):
                 messages.error(request, "No user found with that email address.")
     else:
         form = PasswordResetForm()
-    return render(request, "medicaltutordjapp/password_reset.html", {"form": form})
+    return render(request, "medicaltutordjapp/password_reset/password_reset.html", {"form": form})
 
 def password_reset_done(request):
-    return render(request, "medicaltutordjapp/password_reset_done.html")
+    return render(request, "medicaltutordjapp/password_reset/password_reset_done.html")
 
 def password_reset_confirm(request, uidb64, token):
     try:
@@ -126,30 +153,94 @@ def password_reset_confirm(request, uidb64, token):
                 return redirect("password_reset_complete")
         else:
             form = SetPasswordForm(user)
-        return render(request, "medicaltutordjapp/password_reset_confirm.html", {"form": form})
+        return render(request, "medicaltutordjapp/password_reset/password_reset_confirm.html", {"form": form})
     else:
         messages.error(request, "The reset link is no longer valid.")
         return redirect("home")
 
 def password_reset_complete(request):
-    return render(request, "medicaltutordjapp/password_reset_complete.html")
+    return render(request, "medicaltutordjapp/password_reset/password_reset_complete.html")
 
 def plans(request):
     all_plans = Plan.objects.all()
-    return render(request, 'medicaltutordjapp/plans.html', {'plans': all_plans})
+    # Get the receiver payment information from the Payment model's constants
+    receiver_id_card = Payment.RECEIVER_ID_CARD
+    return render(request, 'medicaltutordjapp/plans.html', {
+        'plans': all_plans,
+        'receiver_id_card': receiver_id_card
+    })
 
 def subscribe(request, plan_id):
     if not request.user.is_authenticated:
         return redirect('login')
     
-    plan = get_object_or_404(Plan, pk=plan_id)
-    user = request.user
+    if request.method == 'POST':
+        plan_id = request.POST.get('plan_id')
+        transaction_id = request.POST.get('transaction_id')
+        
+        try:
+            plan = Plan.objects.get(pk=plan_id)
+            
+            # Check if transaction_id has already been used in a payment
+            if Payment.objects.filter(transaction_id=transaction_id).exists():
+                error_message = "Este número de transacción ya ha sido utilizado."
+                return redirect(f'/plans/?error={urllib.parse.quote(error_message)}&plan_id={plan_id}')
+            
+            # Check if voucher exists and hasn't been used
+
+            # Create payment record
+            payment = Payment.objects.create(
+                user=request.user,
+                transaction_id=transaction_id,
+                amount=plan.price,
+                payment_date=datetime.now()
+            )
+            
+            # Check if there's a matching voucher
+            try:
+                voucher = Voucher.objects.get(
+                    transaction_id=transaction_id,
+                    amount=plan.price,
+                    card_id=Payment.RECEIVER_ID_CARD,
+                    used=False  # Only get unused vouchers
+                )
+                
+                # Create payment record
+                payment = Payment.objects.create(
+                    user=request.user,
+                    transaction_id=transaction_id,
+                    amount=plan.price,
+                    payment_date=datetime.now()
+                )
+                
+                # Mark voucher as used
+                voucher.mark_as_used()
+                
+                # Update user's profile with the new plan
+                user_profile = request.user.profile
+                user_profile.update_plan(plan)
+                
+                # If voucher exists, payment is valid
+                # Update user's profile with the new plan
+                user_profile = request.user.profile
+                user_profile.plan = plan
+                user_profile.save()                
+                messages.success(request, f"¡Pago exitoso! Te has suscrito al plan {plan.plan_name}.")
+                return redirect('chat')
+                
+            except Voucher.DoesNotExist:
+                # If no matching voucher found, payment is invalid
+                payment.delete()  # Remove the invalid payment record
+                error_message = "Pago no válido. Por favor verifica los datos de la transacción."
+                return redirect(f'/plans/?error={urllib.parse.quote(error_message)}&plan_id={plan_id}')
+                
+        except Plan.DoesNotExist:
+            error_message = "Plan no encontrado."
+            return redirect(f'/plans/?error={urllib.parse.quote(error_message)}')
+        except Exception as e:
+            error_message = f"Error al procesar el pago: {str(e)}"
+            return redirect(f'/plans/?error={urllib.parse.quote(error_message)}&plan_id={plan_id}')
     
-    # Update user's subscription plan
-    user.plan = plan
-    user.save()
-    
-    messages.success(request, f"Te has suscrito al plan {plan.plan_name} exitosamente.")
     return redirect('plans')
 
 @login_required
@@ -158,56 +249,83 @@ def chat(request):
 
 @require_GET
 def ask_gpt(request):
-    # Extract the user-provided topic, message, and subject from the GET parameters
-    subject = request.GET.get('subject')
-    topic = request.GET.get('topic')
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'User not authenticated'}, status=401)
+
+    # Extract parameters with default values
+    subject = request.GET.get('subject', '')
+    topic = request.GET.get('topic', '')
     message = request.GET.get('message')
 
     # Ensure the message is not empty
     if not message:
         return JsonResponse({'error': 'Message parameter is missing'}, status=400)
 
-    # Prepare the conversation history
-    conversation = []
-    
-    # Add a directive for GPT to act like a professor
-    conversation.append({"role": "system", "content": "You are a knowledgeable {subject} professor. Respond with detailed, informative, and professional answers."})
-    
-    # If a subject is provided, add it as a context
-    if subject:
-        conversation.append({"role": "system", "content": f"The subject is: {subject}"})
+    # Check if user has a paid plan with remaining queries
+    user_profile = request.user.profile
+    if user_profile.plan and user_profile.remaining_queries == 0:
+        return JsonResponse({
+            'error': 'Has alcanzado el límite de preguntas en tu plan actual. ' +
+                    'Puedes seguir haciendo cuestionarios o adquirir un nuevo plan.'
+        })
 
-    # If a topic is provided, add it as additional context
-    if topic:
-        conversation.append({"role": "system", "content": f"The topic of discussion is: {topic}"})
-
-    # Add the user's message
-    conversation.append({"role": "user", "content": message})
-    
     try:
+        # Prepare the conversation history
+        conversation = []
+        
+        system_message = "You are a knowledgeable professor. Respond with detailed, informative, and professional answers."
+        if subject:
+            system_message += f" Specializing in {subject}."
+        
+        conversation.append({
+            "role": "system", 
+            "content": system_message
+        })
+
+        if topic:
+            conversation.append({"role": "system", "content": f"The current topic of discussion is: {topic}"})
+
+        conversation.append({"role": "user", "content": message})
+        
         # Make the API call to OpenAI
         response = client.chat.completions.create(
-            model="gpt-4o",  # Or "gpt-3.5-turbo" if you don't have GPT-4 access
+            model="deepseek/deepseek-r1:free",
             messages=conversation,
         )
 
         # Extract the assistant's reply
         assistant_reply = response.choices[0].message.content
 
-        # Return the response as JSON
+        # Only decrement queries if the response was successful
+        if user_profile.plan:
+            user_profile.decrement_queries()
+            # Check if both counters are 0 and reset to free plan
+            if user_profile.remaining_queries == 0 and user_profile.remaining_quizzes == 0:
+                user_profile.plan = None
+                user_profile.save()
+
         return JsonResponse({'response': assistant_reply})
 
-    except openai.APIConnectionError as e:
-        # Handle API connection errors
-        return JsonResponse({'error': str(e.__cause__)}, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
-    except openai.PermissionDeniedError as e:
-        # Handle permission errors (403)
-        return JsonResponse({'error': e.body}, status=403)
-
-    except openai.APIError as e:
-        # Handle generic API errors
-        return JsonResponse({'error': str(e)}, status=e.status_code)
+@login_required
+def check_quiz_limit(request):
+    """Check if user can take a quiz based on their plan limits"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'can_take_quiz': False})
+        
+    user_profile = request.user.profile
+    if user_profile.plan:
+        if user_profile.remaining_quizzes > 0:
+            return JsonResponse({'can_take_quiz': True})
+        else:
+            return JsonResponse({
+                'can_take_quiz': False,
+                'message': 'Has alcanzado el límite de cuestionarios en tu plan actual. ' +
+                          'Puedes seguir haciendo preguntas o adquirir un nuevo plan.'
+            })
+    return JsonResponse({'can_take_quiz': True})
 
 @csrf_exempt
 def generate_questions(request):
@@ -221,9 +339,9 @@ def generate_questions(request):
                 summaries = json.load(file)
             
             if topic not in summaries:
-                summary=", nevermind there's no summary about this topic"
+                summary = ", nevermind there's no summary about this topic"
             else:
-                summary=summaries[topic]
+                summary = summaries[topic]
             
             conversation = data.get('conversation', '')
             num_questions = data.get('numQuestions', 3)
@@ -239,7 +357,7 @@ def generate_questions(request):
             - Each question must be followed by at least one blank line.
             - The question comes first, followed by answers enclosed in curly braces `{}`.
             - Use `=` for correct answers and `~` for incorrect answers.
-            - Feedback for answers can be added using `#`.
+            - Feedback for answers can be added using `#` (don't show this).
             - Use UTF-8 encoding to support special characters.
             - Ensure no introductory text, comments, or extra formatting in the output.
 
@@ -263,14 +381,10 @@ def generate_questions(request):
                 f"Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
             )
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model="deepseek/deepseek-r1:free",
                 messages=[{"role": "user", "content": prompt}],
             )
 
-            # # Log the raw GPT response for debugging
-            # print("Raw GPT Response:", response)
-
-            # Validate the GPT response
             if not response or not hasattr(response, 'choices') or not response.choices:
                 raise ValueError("GPT API did not return a valid response.")
 
@@ -290,12 +404,16 @@ def generate_questions(request):
             html_file_path = '../medicaltutordjproject/medicaltutordjapp/templates/medicaltutordjapp/questions.html'
             gift_parser.save_file(html_file_path)
 
+            # Only decrement the quiz count after successful generation and before redirecting
+            if request.user.is_authenticated:
+                user_profile = request.user.profile
+                if user_profile.plan and user_profile.remaining_quizzes > 0:
+                    user_profile.decrement_quizzes()
+
             # Return the redirect URL only if everything succeeds
             return JsonResponse({'redirect_url': '/questions/'})
 
         except Exception as e:
-            # Log the exception for debugging
-            #print("Error generating questions:", e)
             return JsonResponse({'error': 'Failed to generate questions', 'details': str(e)}, status=500)
 
     # Handle GET requests
@@ -308,9 +426,7 @@ def questions(request):
 def get_correct_subject(topic, subject_topics):
     """Helper function to get the correct subject for a given topic"""
     for subject, topics in subject_topics.items():
-        if topic == subject:  # If the topic is actually a subject
-            return subject
-        elif topic in topics:  # If we find the topic in a subject's topics
+        if topic in topics:  # If we find the topic in a subject's topics
             return subject
     return 'Unknown'
 
@@ -341,97 +457,96 @@ def update_session(request):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
 def qualify_answers(request):
-    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        try:
-            # Load the subject-topic mapping
-            with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
-                subject_topics = json.load(file)
-
-            # Get current topic and subject from session
-            current_topic = request.session.get('current_topic', 'Unknown')
+    """Handle quiz answer qualification"""
+    try:
+        # Parse JSON data from request body
+        data = json.loads(request.body)
+        
+        # Get the GIFT file parser instance
+        gift_parser = gisfttohtml('../medicaltutordjproject/medicaltutordjapp/tempfiles/generated_questions.gift')
+        
+        # Get questions for response
+        questions = {i+1: q.text for i, q in enumerate(gift_parser.questions())}
+        
+        # Qualify the answers
+        results = gift_parser.qualify_answers(data)
+        
+        # Calculate total score
+        correct_answers = sum(1 for result in results.values() if result['result'])
+        total_questions = len(results)
+        
+        # Calculate score with minimum of 2
+        total_score = max(2, floor((correct_answers / total_questions) * 5))
+        
+        # Load the subject-topic mapping
+        with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+            subject_topics = json.load(file)
+            
+        # Get current topic from session
+        current_topic = request.session.get('current_topic', 'Unknown')
+        
+        # Determine the correct subject based on the topic
+        current_subject = get_correct_subject(current_topic, subject_topics)
+        
+        # If subject wasn't found, use the session's subject as fallback
+        if not current_subject:
             current_subject = request.session.get('current_subject', 'Unknown')
-
-            # Validate and get correct subject
-            correct_subject = get_correct_subject(current_topic, subject_topics)
-
-            # If we found a different subject than what was stored, update it
-            if correct_subject != current_subject:
-                current_subject = correct_subject
-                request.session['current_subject'] = current_subject
-                request.session.modified = True
-
-            # Existing qualification logic...
-            data = json.loads(request.body)
-            user_answers = {key: value for key, value in data.items() if key.startswith('q')}
-
-            directory_path = Path('../medicaltutordjproject/medicaltutordjapp/tempfiles')
-            filename = ""
-            if directory_path.exists() and directory_path.is_dir():
-                for file in directory_path.iterdir():
-                    if file.is_file():
-                        filename = file.name
-                        break
+        
+        # Save quiz results to database
+        if request.user.is_authenticated:
+            quiz = Quizzes.objects.create(
+                user=request.user,
+                topic=current_topic,
+                matter=current_subject,
+                questions_count=total_questions,
+                score=total_score,
+                created_at=datetime.now()
+            )
+            
+            # Get or create user stats
+            stats, created = UserStats.objects.get_or_create(user=request.user)
+            
+            # Update user stats
+            stats.total_quizzes = (stats.total_quizzes or 0) + 1
+            stats.last_activity = datetime.now()
+            
+            # Update average score
+            if stats.average_score is None:
+                stats.average_score = total_score
             else:
-                return JsonResponse({'error': 'Directory not found'}, status=404)
+                stats.average_score = (stats.average_score * (stats.total_quizzes - 1) + total_score) / stats.total_quizzes
+            
+            stats.save()
+            stats.update_subject_averages()
+        
+        return JsonResponse({
+            'result': results,
+            'questions': questions,
+            'total_score': total_score
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
-            if not filename:
-                return JsonResponse({'error': 'No file found in directory'}, status=404)
-
-            gift_parser = gisfttohtml(f'../medicaltutordjproject/medicaltutordjapp/tempfiles/{filename}')
-            results = gift_parser.qualify_answers(user_answers)
-            questions = {str(idx): question.text for idx, question in enumerate(gift_parser.questions(), 1)}
-
-            for question_id, result in results.items():
-                user_answer = user_answers.get(f"q{question_id}", "No answer")
-                if isinstance(user_answer, list):
-                    result['user_answer'] = ", ".join(user_answer)
-                else:
-                    result['user_answer'] = user_answer.strip()
-
-            correct_answers = sum(1 for result in results.values() if result['result'])
-            total_possible_score = len(results)
-            total_score = max(2, (correct_answers * 5) // total_possible_score) if total_possible_score > 0 else 2
-
-            # Update user statistics
-            if request.user.is_authenticated:
-                # Create or update quiz record with validated subject
-                quiz = Quizzes.objects.create(
-                    user=request.user,
-                    topic=current_topic,
-                    matter=current_subject,
-                    questions_count=total_possible_score,
-                    score=total_score,
-                    created_at=datetime.now()
-                )
-
-                # Update user stats
-                user_stats, created = UserStats.objects.get_or_create(user=request.user)
-                user_stats.total_quizzes = Quizzes.objects.filter(user=request.user).count()
-                user_stats.last_activity = datetime.now()
-                
-                # Calculate new average score
-                all_scores = Quizzes.objects.filter(user=request.user).values_list('score', flat=True)
-                user_stats.average_score = sum(all_scores) / len(all_scores) if all_scores else 0
-                
-                # Update subject averages
-                user_stats.update_subject_averages()
-                
-                user_stats.save()
-
-            return JsonResponse({
-                'total_score': total_score,
-                'result': results,
-                'questions': questions
-            })
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': 'Error during qualification', 'details': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+@login_required
+@require_http_methods(["POST"])
+def restore_quiz_count(request):
+    """Restore quiz count when user cancels a quiz"""
+    try:
+        if request.user.is_authenticated:
+            user_profile = request.user.profile
+            if user_profile.plan:
+                user_profile.remaining_quizzes += 1
+                user_profile.save()
+                return JsonResponse({'success': True, 'message': 'Quiz count restored'})
+        return JsonResponse({'success': False, 'message': 'No plan found'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 def qualified_answers(request):
     score = request.GET.get('score', 0)
@@ -480,4 +595,3 @@ def statistics(request):
         'recent_quizzes': recent_quizzes,
         'subject_averages': subject_averages
     })
-

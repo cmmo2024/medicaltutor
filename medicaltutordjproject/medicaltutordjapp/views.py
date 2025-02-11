@@ -31,7 +31,7 @@ from math import floor
 import json
 import urllib
 
-client = OpenAI(api_key='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', base_url="https://openrouter.ai/api/v1")
+client = OpenAI(api_key='', base_url="https://openrouter.ai/api/v1")
 
 def home(request):
     if request.user.is_authenticated:

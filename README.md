@@ -21,7 +21,7 @@ MedicalTutor is tailored for:
 - **Frontend**: HTML, CSS, JavaScript
 - **Backend**: Django
 - **AI Integration**: OpenAI API
-- **Database**: SQLite 
+- **Database**: PostgreSQL 
 
 ## Usage
 

@@ -24,7 +24,7 @@
                 </div>
                 <div class="stat-card">
                     <h3>Puntuación Promedio</h3>
-                    <p>{{ user_stats.average_score|floatformat:1|default:"0.0" }}/5.0</p>
+                    <p>{{ user_stats.average_score|floatformat:2 }}</p>
                 </div>
                 <div class="stat-card">
                     <h3>Última Actividad</h3>
@@ -48,7 +48,7 @@
                             {% for subject in subject_averages %}
                             <tr>
                                 <td>{{ subject.matter }}</td>
-                                <td>{{ subject.avg_score|floatformat:1 }}/5.0</td>
+                                <td>{{ subject.avg_score|floatformat:0 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -80,7 +80,7 @@
                                 <td>{{ quiz.matter }}</td>
                                 <td>{{ quiz.topic }}</td>
                                 <td>{{ quiz.questions_count }}</td>
-                                <td>{{ quiz.score }}/5.0</td>
+                                <td>{{ quiz.score|floatformat:0 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

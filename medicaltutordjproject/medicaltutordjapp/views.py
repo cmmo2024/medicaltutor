@@ -31,7 +31,7 @@ from math import floor
 import json
 import urllib
 
-client = OpenAI(api_key='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', base_url="https://openrouter.ai/api/v1")
+client = OpenAI(api_key='', base_url="https://openrouter.ai/api/v1")
 
 def home(request):
     if request.user.is_authenticated:
@@ -95,11 +95,20 @@ def login_view(request):
 
 @login_required
 def logout_view(request):
-    # Save current session data to user profile before logging out
-    if request.user.is_authenticated and hasattr(request.user, 'profile'):
-        request.user.profile.last_subject = request.session.get('current_subject')
-        request.user.profile.last_topic = request.session.get('current_topic')
-        request.user.profile.save()
+    if request.user.is_authenticated:
+        # Save current chat state to user profile before logging out
+        user_session_key = f'user_{request.user.id}_chat'
+        user_session = request.session.get(user_session_key, {})
+        
+        user_profile = request.user.profile
+        user_profile.last_subject = user_session.get('current_subject', '')
+        user_profile.last_topic = user_session.get('current_topic', '')
+        user_profile.last_chat_content = user_session.get('chat_content', '')
+        user_profile.save()
+        
+        # Clear this user's session data
+        if user_session_key in request.session:
+            del request.session[user_session_key]
     
     logout(request)
     return redirect('home')
@@ -245,7 +254,50 @@ def subscribe(request, plan_id):
 
 @login_required
 def chat(request):
-    return render(request, "medicaltutordjapp/chat.html")
+    # Create a unique session key for this user
+    user_session_key = f'user_{request.user.id}_chat'
+    
+    # Only load user's last chat state if we haven't initialized their session yet
+    if user_session_key not in request.session:
+        request.session[user_session_key] = {
+            'chat_content': request.user.profile.last_chat_content or '',
+            'current_subject': request.user.profile.last_subject or '',
+            'current_topic': request.user.profile.last_topic or ''
+        }
+    
+    context = {
+        'initial_chat_content': request.session[user_session_key]['chat_content'],
+        'initial_subject': request.session[user_session_key]['current_subject'],
+        'initial_topic': request.session[user_session_key]['current_topic']
+    }
+    
+    return render(request, "medicaltutordjapp/chat.html", context)
+
+# Define a function to ask the bot if the response is relevant
+def is_response_relevant(response, subject, topic):
+    """
+    Ask the bot to evaluate if the response is relevant to the subject and topic.
+    """
+    # Prepare the relevance-checking prompt
+    relevance_prompt = (
+        f"Given the subject '{subject}' and topic '{topic}', is the following response relevant? "
+        f"Respond with 'Yes' if it is relevant or 'No' if it is not relevant. "
+        f"Response: {response}"
+    )
+
+    # Ask the bot to evaluate relevance
+    relevance_check = client.chat.completions.create(
+        model="deepseek/deepseek-r1:free",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant. Evaluate the relevance of the response to the given subject and topic."},
+            {"role": "user", "content": relevance_prompt}
+        ],
+        max_tokens=10,  # Limit the response to "Yes" or "No"
+    )
+
+    # Extract the bot's evaluation
+    relevance_answer = relevance_check.choices[0].message.content.strip().lower()
+    return relevance_answer == "yes"
 
 @require_GET
 def ask_gpt(request):
@@ -287,7 +339,7 @@ def ask_gpt(request):
 
         conversation.append({"role": "user", "content": message})
         
-        # Make the API call to OpenAI
+        # Make the API call to OpenAI to generate the response
         response = client.chat.completions.create(
             model="deepseek/deepseek-r1:free",
             messages=conversation,
@@ -296,8 +348,14 @@ def ask_gpt(request):
         # Extract the assistant's reply
         assistant_reply = response.choices[0].message.content
 
-        # Only decrement queries if the response was successful
-        if user_profile.plan:
+        # Ask the bot to evaluate the relevance of the response
+        if not is_response_relevant(assistant_reply, subject, topic):
+            assistant_reply = (
+                "Lo siento, pero tu pregunta no está relacionada con el tema especificado. Por favor, haz una pregunta relacionada con el tema."
+            )
+
+        # Only decrement queries if the response was successful and relevant
+        if user_profile.plan and is_response_relevant(assistant_reply, subject, topic):
             user_profile.decrement_queries()
             # Check if both counters are 0 and reset to free plan
             if user_profile.remaining_queries == 0 and user_profile.remaining_quizzes == 0:
@@ -349,28 +407,57 @@ def generate_questions(request):
             if not topic:
                 return JsonResponse({'error': 'Topic is missing'}, status=400)
 
-            # Detailed GIFT instructions
+            # Updated GIFT instructions with more examples
             instructions = """
             General instructions for GIFT format:
 
-            - Questions should be numbered as "1. question text", "2. question text", "3. question text" and so on.
-            - Each question must be followed by at least one blank line.
-            - The question comes first, followed by answers enclosed in curly braces `{}`.
-            - Use `=` for correct answers and `~` for incorrect answers.
-            - Feedback for answers can be added using `#` (don't show this).
-            - Use UTF-8 encoding to support special characters.
-            - Ensure no introductory text, comments, or extra formatting in the output.
+            1. Multiple Choice (Single Answer):
+            Who's buried in Grant's tomb?{=Grant ~no one ~Napoleon ~Churchill}
 
-            Examples:
-            - Multiple Choice with Single Right Answer: "Who is buried in Grant's tomb? {=Grant ~Napoleon ~Churchill}"
-            - Multiple Choice with Multiple Right Answers (Checkboxes): 
-              "What two people are entombed in Grant's tomb? { ~%-100%No one ~%50%Grant ~%50%Grant's wife ~%-100%Grant's father }"
-            - True/False: "The sun rises in the East. {T}"
-            - Short Answer: "Two plus two equals {=four =4}"
-            - Matching: "Match countries to capitals: {=Canada -> Ottawa =India -> New Delhi}"
-            - Numerical with Tolerance: "What is pi to 3 decimal places? {#3.141:0.001}"
-            - Numerical Range: "What is the value of pi (to 3 decimal places)? {#3.141..3.142}"
-            - Missing Word: "Mahatma Gandhi's birthday is in {~January =October ~March}."
+            2. Multiple Choice (Multiple Answers):
+            What two people are entombed in Grant's tomb? {
+               ~%-100%No one
+               ~%50%Grant
+               ~%50%Grant's wife
+               ~%-100%Grant's father
+            }
+
+            3. True/False:
+            Grant was buried in a tomb in New York City.{T}
+            The sun rises in the West.{FALSE}
+
+            4. Short Answer:
+            Who's buried in Grant's tomb?{=Grant =Ulysses S. Grant =Ulysses Grant}
+            Two plus two equals {=four =4}
+
+            5. Matching:
+            Match the following countries with their capitals. {
+               =Canada -> Ottawa
+               =Italy  -> Rome
+               =Japan  -> Tokyo
+               =India  -> New Delhi
+            }
+
+            6. Missing Word:
+            Mahatma Gandhi's birthday is an Indian holiday on {~15th ~3rd =2nd} of October.
+
+            7. Numerical:
+            Simple range: When was Ulysses S. Grant born?{#1822:5}
+            Precise value: What is pi (3 decimals)?{#3.141..3.142}
+            Multiple ranges: When was Grant born?{#=1822:0 =%50%1822:2}
+
+            Important formatting rules:
+            - Questions must be numbered as "1. question text", "2. question text", "3. question text" and so on
+            - Questions must be separated by blank lines
+            - Use = for correct answers and ~ for incorrect ones
+            - For multiple choice, one = and several ~ answers and don't show the part like "~%-100%" on the interface
+            - For numerical, use # and specify ranges with : or ..
+            - For matching, minimum three pairs with ->
+            - Avoid HTML tags in questions/answers
+            - Don't write the question's type.
+            - Don't show feedback for answers
+            - Use UTF-8 encoding to support special characters
+            - Ensure no introductory text, comments, or extra formatting in the output
 
             f"Generate clean GIFT format questions in the {conversation} language, strictly following these guidelines."
             """
@@ -430,29 +517,54 @@ def get_correct_subject(topic, subject_topics):
             return subject
     return 'Unknown'
 
+@login_required
+def get_session_data(request):
+    """Get the current user's session data"""
+    user_session_key = f'user_{request.user.id}_chat'
+    user_session = request.session.get(user_session_key, {})
+    
+    data = {
+        'subject': user_session.get('current_subject', ''),
+        'topic': user_session.get('current_topic', ''),
+        'chat_content': user_session.get('chat_content', '')
+    }
+    return JsonResponse(data)
+
 @csrf_exempt
+@login_required
 def update_session(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             subject = data.get('subject')
             topic = data.get('topic')
+            chat_content = data.get('chat_content')
             
-            if subject and topic:
-                # Load subject-topic mapping
-                with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
-                    subject_topics = json.load(file)
-                
-                # Validate and get correct subject
-                correct_subject = get_correct_subject(topic, subject_topics)
-                
-                # Store the correct subject and topic in session
-                request.session['current_subject'] = correct_subject
-                request.session['current_topic'] = topic
-                request.session.modified = True
-                return JsonResponse({'status': 'success'})
-            else:
-                return JsonResponse({'error': 'Missing subject or topic'}, status=400)
+            # Get or create user's session data
+            user_session_key = f'user_{request.user.id}_chat'
+            if user_session_key not in request.session:
+                request.session[user_session_key] = {}
+            
+            # Update session data
+            if subject is not None:
+                request.session[user_session_key]['current_subject'] = subject
+            if topic is not None:
+                request.session[user_session_key]['current_topic'] = topic
+            if chat_content is not None:
+                request.session[user_session_key]['chat_content'] = chat_content
+            
+            # Update user profile
+            user_profile = request.user.profile
+            if subject is not None:
+                user_profile.last_subject = subject
+            if topic is not None:
+                user_profile.last_topic = topic
+            if chat_content is not None:
+                user_profile.last_chat_content = chat_content
+            
+            user_profile.save()
+            request.session.modified = True
+            return JsonResponse({'status': 'success'})
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)

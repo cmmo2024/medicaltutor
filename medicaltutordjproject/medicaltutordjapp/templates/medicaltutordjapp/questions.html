@@ -11,81 +11,103 @@
 <body>
 <form id="questions-form" action="/qualify_answers/" method="POST">
 {% csrf_token %}
-<h3>1. ¿Qué estructura de la hemoglobina permite el transporte de oxígeno en los vertebrados?</h3>
+<h3>1. ¿Qué demostró el experimento de Miller-Urey de 1953?</h3>
 
                             <label>
-                                <input type="radio" name="q1" value="Es una proteína de estructura cuaternaria con grupos hemo que contienen Fe2+">
-                                Es una proteína de estructura cuaternaria con grupos hemo que contienen Fe2+
+                                <input type="radio" name="q1" value="Síntesis de aminoácidos">
+                                Síntesis de aminoácidos
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Es una proteína de estructura terciaria con puentes disulfuro">
-                                Es una proteína de estructura terciaria con puentes disulfuro
+                                <input type="radio" name="q1" value="Síntesis de ADN">
+                                Síntesis de ADN
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Es un lípido de membrana con cadenas glucosiladas">
-                                Es un lípido de membrana con cadenas glucosiladas
+                                <input type="radio" name="q1" value="Formación de células eucariotas">
+                                Formación de células eucariotas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Es un carbohidrato unido a dominios α-hélices">
-                                Es un carbohidrato unido a dominios α-hélices
+                                <input type="radio" name="q1" value="Degradación de ARN">
+                                Degradación de ARN
                             </label><br>
                         
-<h3>2. ¿Cuál de estas proteínas es un ejemplo de proteína integral de membrana en células humanas?</h3>
+<h3>2. La atmósfera primitiva de la Tierra tenía abundante oxígeno libre.</h3>
+
+                        <label>
+                            <input type="radio" name="q2" value="T">
+                            V
+                        </label><br>
+                        <label>
+                            <input type="radio" name="q2" value="F">
+                            F
+                        </label><br>
+                    
+<h3>3. Según la hipótesis del mundo de ARN, ¿qué molécula podría almacenar información y actuar como catalizador?</h3>
 
                             <label>
-                                <input type="radio" name="q2" value="Na+/K+ ATPasa">
-                                Na+/K+ ATPasa
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Fosfatasa alcalina (anclada a GPI)">
-                                Fosfatasa alcalina (anclada a GPI)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Espectrina (proteína periférica)">
-                                Espectrina (proteína periférica)
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Proteína Ras (anclada a lípidos)">
-                                Proteína Ras (anclada a lípidos)
-                            </label><br>
-                        
-<h3>3. ¿Qué tipo de proteínas de membrana son responsables de la adhesión célula-célula en tejidos epiteliales?</h3>
-
-                            <label>
-                                <input type="radio" name="q3" value="Cadherinas">
-                                Cadherinas
+                                <input type="radio" name="q3" value="ARN">
+                                ARN
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Aquaporinas">
-                                Aquaporinas
+                                <input type="radio" name="q3" value="ADN">
+                                ADN
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Proteínas G">
-                                Proteínas G
+                                <input type="radio" name="q3" value="Proteínas">
+                                Proteínas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Receptores Toll-like">
-                                Receptores Toll-like
+                                <input type="radio" name="q3" value="Lípidos">
+                                Lípidos
                             </label><br>
                         
+<h3>4. ¿Qué ambiente submarino se considera clave en la síntesis de moléculas prebióticas?</h3>
+
+                            <label>
+                                <input type="radio" name="q4" value="Fuentes hidrotermales alcalinas">
+                                Fuentes hidrotermales alcalinas
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q4" value="Arrecifes de coral">
+                                Arrecifes de coral
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q4" value="Fosas oceánicas">
+                                Fosas oceánicas
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q4" value="Lagunas costeras">
+                                Lagunas costeras
+                            </label><br>
+                        
+<h3>5. La panspermia explica el origen químico de la vida en la Tierra.</h3>
+
+                        <label>
+                            <input type="radio" name="q5" value="T">
+                            V
+                        </label><br>
+                        <label>
+                            <input type="radio" name="q5" value="F">
+                            F
+                        </label><br>
+                    
 <!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">

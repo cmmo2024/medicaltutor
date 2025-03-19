@@ -7,8 +7,9 @@ class UserProfile(models.Model):
     plan = models.ForeignKey('Plan', on_delete=models.DO_NOTHING, null=True, blank=True)
     remaining_queries = models.IntegerField(default=0)
     remaining_quizzes = models.IntegerField(default=0)
-    #last_subject = models.CharField(max_length=100, null=True, blank=True)
-    #last_topic = models.CharField(max_length=100, null=True, blank=True)
+    last_subject = models.CharField(max_length=100, null=True, blank=True)
+    last_topic = models.CharField(max_length=100, null=True, blank=True)
+    last_chat_content = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.plan.plan_name if self.plan else 'Free Plan'}"
@@ -73,7 +74,7 @@ class Payment(models.Model):
 class Voucher(models.Model):
     voucher_id = models.AutoField(primary_key=True)
     transaction_id = models.TextField(unique=True)  # Make transaction_id unique
-    card_id = models.IntegerField()
+    card_id = models.CharField(max_length=255, null=False)
     amount = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)  # Add used field to track usage

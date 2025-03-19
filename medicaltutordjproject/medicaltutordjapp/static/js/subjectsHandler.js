@@ -2,7 +2,7 @@
 let selectedSubject = "";
 let isTopicSelected = false;
 let hasGPTResponded = false;
-let chatJustCleared = false; // New flag to track if chat was just cleared
+let chatJustCleared = false;
 
 // Get CSRF token from cookies
 function getCSRFToken() {
@@ -36,26 +36,37 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Load saved subject and topic if they exist
-    const savedSubject = localStorage.getItem('selectedSubject');
-    const savedTopic = localStorage.getItem('selectedTopic');
-    
-    if (savedSubject && savedTopic) {
-        selectedSubject = savedSubject;
-        updateSessionData(savedSubject, savedTopic);
-        
-        // Find and activate the correct accordion
-        const accordions = document.querySelectorAll('.accordion');
-        accordions.forEach(accordion => {
-            if (accordion.getAttribute('data-subject') === savedSubject) {
-                accordion.classList.add('active');
-                const panel = accordion.nextElementSibling;
-                if (panel) {
-                    panel.style.display = 'block';
+    // Get session data from server
+    fetch('/get_session_data/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.subject && data.topic) {
+            selectedSubject = data.subject;
+            
+            // Find and activate the correct accordion
+            const accordions = document.querySelectorAll('.accordion');
+            accordions.forEach(accordion => {
+                if (accordion.getAttribute('data-subject') === data.subject) {
+                    accordion.classList.add('active');
+                    const panel = accordion.nextElementSibling;
+                    if (panel) {
+                        panel.style.display = 'block';
+                    }
                 }
-            }
-        });
-    }
+            });
+
+            // Load the topic if it exists
+            loadTopic(data.topic, data.chat_content);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading session data:', error);
+    });
 });
 
 function selectSubject(element) {
@@ -69,11 +80,12 @@ function selectSubject(element) {
     // Update the selected subject
     selectedSubject = element.getAttribute('data-subject');
     
-    // Store the selected subject in localStorage
-    localStorage.setItem('selectedSubject', selectedSubject);
+    // Update session data
+    updateSessionData(selectedSubject, null);
 }
 
-function updateSessionData(subject, topic) {
+// Update the updateSessionData function
+function updateSessionData(subject, topic, chatContent) {
     fetch('/update_session/', {
         method: 'POST',
         headers: {
@@ -82,7 +94,8 @@ function updateSessionData(subject, topic) {
         },
         body: JSON.stringify({
             subject: subject,
-            topic: topic
+            topic: topic,
+            chat_content: chatContent
         })
     })
     .then(response => response.json())
@@ -96,18 +109,18 @@ function updateSessionData(subject, topic) {
     });
 }
 
-function loadTopic(topic) {
+function loadTopic(topic, savedContent = null) {
     const chatContent = document.getElementById('chat-content');
     
-    localStorage.setItem('selectedTopic', topic);
     document.getElementById('topic-title').innerText = topic;
 
-    if (chatJustCleared || chatContent.innerHTML.trim() === "") {
-        // If chat was just cleared or is empty, just add the welcome message
+    if (savedContent) {
+        chatContent.innerHTML = savedContent;
+        hasGPTResponded = chatContent.querySelector('.bot-message') !== null;
+    } else if (chatJustCleared || chatContent.innerHTML.trim() === "") {
         chatContent.innerHTML = `<p>Comenzemos a repasar sobre ${topic}. No dudes en hacer preguntas!</p>`;
-        chatJustCleared = false; // Reset the flag
+        chatJustCleared = false;
     } else {
-        // If chat has content, add separator and new topic section
         const topicSeparator = document.createElement('div');
         topicSeparator.style.borderTop = '2px solid #ccc';
         topicSeparator.style.margin = '20px 0';
@@ -120,30 +133,18 @@ function loadTopic(topic) {
         chatContent.appendChild(welcomeMessage);
     }
     
-    saveChatContent();
-    
     document.getElementById('user-input').disabled = false;
     document.getElementById('send-button').disabled = false;
     document.getElementById('clear-button').disabled = false;
     document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
-    document.getElementById('share-button').disabled = !hasGPTResponded;
 
     isTopicSelected = true;
     
-    // Update session data with current subject and topic
-    updateSessionData(selectedSubject, topic);
+    // Update session data with current subject, topic and chat content
+    updateSessionData(selectedSubject, topic, chatContent.innerHTML);
 
     // Scroll to the bottom to show the new topic section
     chatContent.scrollTop = chatContent.scrollHeight;
-}
-
-// Save chat content whenever it changes
-function saveChatContent() {
-    const chatContent = document.getElementById('chat-content');
-    const currentTopic = document.getElementById('topic-title').innerText;
-    if (currentTopic && currentTopic !== 'Seleccione un tema para repasar') {
-        localStorage.setItem(`chat_${currentTopic}`, chatContent.innerHTML);
-    }
 }
 
 function sendMessage() {
@@ -168,21 +169,18 @@ function sendMessage() {
         // Show loading animation
         loadingIndicator.style.display = 'block';
 
-        // Send request to Django view to get GPT response
+        // Send request to Django view
         fetch(`/ask_gpt?subject=${encodeURIComponent(selectedSubject)}&topic=${encodeURIComponent(topic)}&message=${encodeURIComponent(userMessage)}`)
             .then(response => response.json())
             .then(data => {
-                // Hide loading animation
                 loadingIndicator.style.display = 'none';
 
                 if (data.error) {
-                    // Display error message in chat with fade-out effect
                     const errorMessageElement = document.createElement('div');
                     errorMessageElement.className = 'error-message';
                     errorMessageElement.textContent = data.error;
                     chatContent.appendChild(errorMessageElement);
                     
-                    // Remove the error message after 5 seconds
                     setTimeout(() => {
                         errorMessageElement.style.opacity = '0';
                         errorMessageElement.style.transform = 'translateY(-10px)';
@@ -191,27 +189,56 @@ function sendMessage() {
                         }, 300);
                     }, 5000);
                 } else {
-                    // Display GPT's response as Markdown
+                    const botMessageContainer = document.createElement('div');
+                    botMessageContainer.className = 'bot-message-container';
+
                     const botMessageElement = document.createElement('div');
                     botMessageElement.className = 'bot-message';
                     botMessageElement.innerHTML = marked.parse(data.response);
-                    chatContent.appendChild(botMessageElement);
 
-                    // Enable "Ask Me Questions" button after GPT responds
+                    const copyButton = document.createElement('button');
+                    copyButton.className = 'copy-button';
+                    copyButton.innerHTML = '📋';
+                    copyButton.title = 'Copiar respuesta';
+                    copyButton.onclick = function() {
+                        navigator.clipboard.writeText(data.response)
+                            .then(() => {
+                                // Visual feedback
+                                copyButton.innerHTML = '✓';
+                                setTimeout(() => {
+                                    copyButton.innerHTML = '📋';
+                                }, 2000);
+                            })
+                            .catch(err => {
+                                console.error('Error copying text:', err);
+                                copyButton.innerHTML = '❌';
+                                setTimeout(() => {
+                                    copyButton.innerHTML = '📋';
+                                }, 2000);
+                            });
+                    };
+
+                    botMessageContainer.appendChild(botMessageElement);
+                    botMessageContainer.appendChild(copyButton);
+                    chatContent.appendChild(botMessageContainer);
                     hasGPTResponded = true;
                 }
-                saveChatContent();
+
+                // Update session with new chat content
+                updateSessionData(selectedSubject, topic, chatContent.innerHTML);
+                
                 document.getElementById('ask-questions-btn').disabled = false;
-                document.getElementById('share-button').disabled = false;
             })
             .catch(error => {
-                console.error('Error fetching GPT response:', error);
+                console.error('Error:', error);
                 loadingIndicator.style.display = 'none';
                 const errorMessageElement = document.createElement('div');
                 errorMessageElement.className = 'error-message';
                 errorMessageElement.textContent = "⚠️ Conexión interrumpida. Por favor intente de nuevo.";
                 chatContent.appendChild(errorMessageElement);
-                saveChatContent();
+                
+                // Update session even on error to preserve the error message
+                updateSessionData(selectedSubject, topic, chatContent.innerHTML);
             });
 
         input.value = '';
@@ -223,21 +250,18 @@ function clearChat() {
     document.getElementById('topic-title').innerText = "Seleccione un tema para repasar";
     document.getElementById('chat-content').innerHTML = "";
     
-    // Clear stored chat for current topic
-    if (currentTopic && currentTopic !== 'Seleccione un tema para repasar') {
-        localStorage.removeItem(`chat_${currentTopic}`);
-    }
+    // Update session to clear the chat
+    updateSessionData(null, null, null);
 
     // Disable buttons after clearing
     document.getElementById('user-input').disabled = true;
     document.getElementById('send-button').disabled = true;
     document.getElementById('clear-button').disabled = true;
     document.getElementById('ask-questions-btn').disabled = true;
-    document.getElementById('share-button').disabled = true;
 
     isTopicSelected = false;
     hasGPTResponded = false;
-    chatJustCleared = true; // Set the flag when chat is cleared
+    chatJustCleared = true;
 }
 
 // Function to show plan upgrade message
@@ -388,68 +412,35 @@ function generateQuestions(numQuestions) {
     });
 }
 
-function shareChatContent() {
-    const chatContent = document.getElementById('chat-content').innerText.trim(); // Get the text content of the chat
-
-    if (!chatContent) {
-        alert('There is no chat content to share.');
-        return;
-    }
-
-    if (navigator.share) {
-        // Use the Web Share API
-        navigator.share({
-            title: 'Revisa esta conversación del Tutor Médico',
-            text: chatContent,
-            url: generateShareableLink(chatContent)
-        })
-        .then(() => console.log('Content shared successfully!'))
-        .catch((error) => console.error('Error sharing content:', error));
-    } else {
-        // Fallback for unsupported browsers: Generate a shareable link
-        const shareableLink = generateShareableLink(chatContent);
-        alert(`Sharing is not supported on this browser. Here is your shareable link:\n\n${shareableLink}`);
-    }
-}
-
-// Helper function to generate a shareable link
-function generateShareableLink(chatContent) {
-    const baseUrl = window.location.origin + window.location.pathname; // Base URL of the current page
-    const encodedContent = encodeURIComponent(chatContent); // Encode the chat content for safe use in a URL
-    return `${baseUrl}?sharedChat=${encodedContent}`;
-}
-
-// Optionally, function to load chat content from URL on page load
-function loadSharedChat() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedChat = urlParams.get('sharedChat');
-    if (sharedChat) {
-        const chatContent = decodeURIComponent(sharedChat); // Decode the chat content
-        document.getElementById('chat-content').innerText = chatContent; // Populate the chat area with the shared content
-    }
-}
-
-// Call loadSharedChat when the page loads
-document.addEventListener('DOMContentLoaded', loadSharedChat);
-
-// Disable input and buttons by default until a topic is selected
-window.onload = function () {
-    document.getElementById('topic-title').innerText = localStorage.getItem('selectedTopic');
-    const savedTopic = localStorage.getItem('selectedTopic');
-    if (savedTopic) {
-        const savedChat = localStorage.getItem(`chat_${savedTopic}`);
-        
-        isTopicSelected = true;
-                
-        if (savedChat) {
-            document.getElementById('chat-content').innerHTML = savedChat;
+// Update the window.onload function
+window.onload = function() {
+    // Initialize UI state
+    const chatContent = document.getElementById('chat-content');
+    const topicTitle = document.getElementById('topic-title');
+    
+    // Restore chat state if available
+    if (window.initialChatState) {
+        if (window.initialChatState.content) {
+            chatContent.innerHTML = window.initialChatState.content;
             hasGPTResponded = true;
         }
+        
+        if (window.initialChatState.topic) {
+            topicTitle.innerText = window.initialChatState.topic;
+            selectedSubject = window.initialChatState.subject;
+            isTopicSelected = true;
+            
+            // Enable buttons if we have a topic
+            document.getElementById('user-input').disabled = false;
+            document.getElementById('send-button').disabled = false;
+            document.getElementById('clear-button').disabled = false;
+            document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
+        } else {
+            // Default state - everything disabled
+            document.getElementById('user-input').disabled = true;
+            document.getElementById('send-button').disabled = true;
+            document.getElementById('clear-button').disabled = true;
+            document.getElementById('ask-questions-btn').disabled = true;
+        }
     }
-    
-    document.getElementById('user-input').disabled = !isTopicSelected;
-    document.getElementById('send-button').disabled = !isTopicSelected;
-    document.getElementById('clear-button').disabled = !isTopicSelected;
-    document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
-    document.getElementById('share-button').disabled = !hasGPTResponded;
 };

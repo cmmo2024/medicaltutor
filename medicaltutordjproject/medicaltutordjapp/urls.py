@@ -16,6 +16,7 @@ urlpatterns = [
     path('qualify_answers/', views.qualify_answers, name='qualify_answers'),
     path('qualified_answers/', views.qualified_answers, name='qualified_answers'),
     path('statistics/', views.statistics, name='statistics'),
+    path('get_session_data/', views.get_session_data, name='get_session_data'),
     path('update_session/', views.update_session, name='update_session'),
     path('restore_quiz_count/', views.restore_quiz_count, name='restore_quiz_count'),
     path('password_reset/', views.password_reset_request, name='password_reset'),

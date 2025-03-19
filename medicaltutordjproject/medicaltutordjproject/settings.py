@@ -73,8 +73,12 @@ WSGI_APPLICATION = "medicaltutordjproject.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "tutor.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "",
+        "USER": "",
+        "PASSWORD": "",
+        "HOST": "127.0.0.1",
+        "DATABASE_PORT": "5432"
     }
 }
 

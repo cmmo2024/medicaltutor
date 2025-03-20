@@ -172,11 +172,20 @@ def password_reset_complete(request):
 
 def plans(request):
     all_plans = Plan.objects.all()
-    # Get the receiver payment information from the Payment model's constants
-    receiver_id_card = Payment.RECEIVER_ID_CARD
+    
+    # Assuming receiver_id_card and phone_number are the same for all plans
+    if all_plans.exists():
+        first_plan = all_plans.first()
+        receiver_id_card = first_plan.receiver_id_card
+        phone_number = first_plan.phone_number
+    else:
+        receiver_id_card = "N/A"  # Default value if no plans exist
+        phone_number = "N/A"     # Default value if no plans exist
+
     return render(request, 'medicaltutordjapp/plans.html', {
         'plans': all_plans,
-        'receiver_id_card': receiver_id_card
+        'receiver_id_card': receiver_id_card,
+        'phone_number': phone_number
     })
 
 def subscribe(request, plan_id):
@@ -210,7 +219,7 @@ def subscribe(request, plan_id):
                 voucher = Voucher.objects.get(
                     transaction_id=transaction_id,
                     amount=plan.price,
-                    card_id=Payment.RECEIVER_ID_CARD,
+                    card_id=Payment.receiver_id_card,
                     used=False  # Only get unused vouchers
                 )
                 

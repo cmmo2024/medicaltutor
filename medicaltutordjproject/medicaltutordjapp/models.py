@@ -59,17 +59,16 @@ class Payment(models.Model):
     payment_date = models.DateTimeField(blank=True, null=True)
     receiver_id_card = models.CharField(max_length=255, null=False)
 
-    RECEIVER_ID_CARD = '1234567890' 
-
     class Meta:
         managed = True
         db_table = 'payments'
-
+        
     def save(self, *args, **kwargs):
-        # Ensure the field is always set to the constant value
-        self.receiver_id_card = self.RECEIVER_ID_CARD
+        # Get the receiver_id_card from the plan
+        if hasattr(self, 'plan'):
+            self.receiver_id_card = self.plan.receiver_id_card
         super().save(*args, **kwargs)
-
+        
         
 class Voucher(models.Model):
     voucher_id = models.AutoField(primary_key=True)
@@ -95,6 +94,9 @@ class Voucher(models.Model):
 class Plan(models.Model):
     plan_id = models.AutoField(primary_key=True)
     plan_name = models.TextField()
+    receiver_id_card = models.CharField(max_length=255, null=False)
+    qr_code = models.ImageField(upload_to='payment_qr/', default='payment_qr/payment-qr.jpg')
+    phone_number = models.CharField(max_length=20, unique=True, null=False)
     price = models.FloatField()
     max_queries = models.IntegerField(blank=True, null=True)
     max_quizzes = models.IntegerField(blank=True, null=True)
@@ -102,6 +104,9 @@ class Plan(models.Model):
     class Meta:
         managed = True
         db_table = 'plans'
+        
+    def __str__(self):
+        return self.plan_name
 
 
 class Quizzes(models.Model):

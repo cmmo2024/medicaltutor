@@ -282,32 +282,6 @@ def chat(request):
     
     return render(request, "medicaltutordjapp/chat.html", context)
 
-# Define a function to ask the bot if the response is relevant
-def is_response_relevant(response, subject, topic):
-    """
-    Ask the bot to evaluate if the response is relevant to the subject and topic.
-    """
-    # Prepare the relevance-checking prompt
-    relevance_prompt = (
-        f"Given the subject '{subject}' and topic '{topic}', is the following response relevant? "
-        f"Respond with 'Yes' if it is relevant or 'No' if it is not relevant. "
-        f"Response: {response}"
-    )
-
-    # Ask the bot to evaluate relevance
-    relevance_check = client.chat.completions.create(
-        model="deepseek/deepseek-r1:free",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant. Evaluate the relevance of the response to the given subject and topic."},
-            {"role": "user", "content": relevance_prompt}
-        ],
-        max_tokens=10,  # Limit the response to "Yes" or "No"
-    )
-
-    # Extract the bot's evaluation
-    relevance_answer = relevance_check.choices[0].message.content.strip().lower()
-    return relevance_answer == "yes"
-
 @require_GET
 def ask_gpt(request):
     if not request.user.is_authenticated:
@@ -331,12 +305,11 @@ def ask_gpt(request):
         })
 
     try:
-        # Prepare the conversation history
         conversation = []
         
-        system_message = "You are a knowledgeable professor. Respond with detailed, informative, and professional answers."
+        system_message = "You are a knowledgeable professor. Respond with detailed, informative, and professional answers. Always repond in the user language."
         if subject:
-            system_message += f" Specializing in {subject}."
+            system_message += f" Specializing in {subject}. Answer questions only about this {subject}. For all other questions that are out of the scope of these subject, please respond politely that the question is out of your scope. In this case, do not answer it."
         
         conversation.append({
             "role": "system", 
@@ -344,27 +317,22 @@ def ask_gpt(request):
         })
 
         if topic:
-            conversation.append({"role": "system", "content": f"The current topic of discussion is: {topic}"})
+            system_message += f"The discussion topic is: {topic}."
+            conversation.append({"role": "system", "content": system_message})
 
         conversation.append({"role": "user", "content": message})
         
         # Make the API call to OpenAI to generate the response
         response = client.chat.completions.create(
-            model="deepseek/deepseek-r1:free",
+            model="qwen/qwq-32b:free",
             messages=conversation,
         )
 
         # Extract the assistant's reply
         assistant_reply = response.choices[0].message.content
 
-        # Ask the bot to evaluate the relevance of the response
-        if not is_response_relevant(assistant_reply, subject, topic):
-            assistant_reply = (
-                "Lo siento, pero tu pregunta no está relacionada con el tema especificado. Por favor, haz una pregunta relacionada con el tema."
-            )
-
         # Only decrement queries if the response was successful and relevant
-        if user_profile.plan and is_response_relevant(assistant_reply, subject, topic):
+        if user_profile.plan:
             user_profile.decrement_queries()
             # Check if both counters are 0 and reset to free plan
             if user_profile.remaining_queries == 0 and user_profile.remaining_quizzes == 0:
@@ -477,7 +445,7 @@ def generate_questions(request):
                 f"Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
             )
             response = client.chat.completions.create(
-                model="deepseek/deepseek-r1:free",
+                model="qwen/qwq-32b:free",
                 messages=[{"role": "user", "content": prompt}],
             )
 

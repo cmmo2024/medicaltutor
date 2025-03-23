@@ -19,15 +19,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Close modal when clicking the close button or outside
+    // Close modal when clicking the close button
     document.querySelector('.close-modal').addEventListener('click', closeModal);
-
-    window.addEventListener('click', function(e) {
-        const modal = document.getElementById('payment-modal');
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
 
     // Handle payment method switch
     const switchOptions = document.querySelectorAll('.switch-option');

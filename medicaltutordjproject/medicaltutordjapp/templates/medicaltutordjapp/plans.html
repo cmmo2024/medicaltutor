@@ -31,7 +31,9 @@
                     <p>Cuestionarios máximos: {{ plan.max_quizzes }}</p>
                     <button class="subscribe-btn" 
                             data-plan-id="{{ plan.plan_id }}"
-                            data-plan-price="{{ plan.price }}">
+                            data-plan-price="{{ plan.price }}"
+                            data-receiver-id="{{ plan.receiver_id_card }}"
+                            data-phone="{{ plan.phone_number }}">
                         Suscribirse
                     </button>
                 </div>
@@ -66,10 +68,10 @@
                     <!-- ID Card Payment Method -->
                     <div id="id-method" class="payment-method">
                         <div class="id-card-info">
-                            <p>Tarjeta o cuenta del destinatario:</p>
-                            <h3>{{ receiver_id_card }}</h3>
-                            <p>Móvil a confirmar:</p>
-                            <h3>{{ phone_number }}</h3>
+                            <p>Cuenta: {{ plan.receiver_id_card }}</p>
+                            <h3 id="receiver-id-display"></h3>
+                            <p>Móvil a confirmar: {{ plan.phone_number }}</p>
+                            <h3 id="phone-number-display"></h3>
                         </div>
                     </div>
 

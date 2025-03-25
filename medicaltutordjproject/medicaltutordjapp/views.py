@@ -172,20 +172,8 @@ def password_reset_complete(request):
 
 def plans(request):
     all_plans = Plan.objects.all()
-    
-    # Assuming receiver_id_card and phone_number are the same for all plans
-    if all_plans.exists():
-        first_plan = all_plans.first()
-        receiver_id_card = first_plan.receiver_id_card
-        phone_number = first_plan.phone_number
-    else:
-        receiver_id_card = "N/A"  # Default value if no plans exist
-        phone_number = "N/A"     # Default value if no plans exist
-
     return render(request, 'medicaltutordjapp/plans.html', {
-        'plans': all_plans,
-        'receiver_id_card': receiver_id_card,
-        'phone_number': phone_number
+        'plans': all_plans
     })
 
 def subscribe(request, plan_id):
@@ -205,22 +193,12 @@ def subscribe(request, plan_id):
                 return redirect(f'/plans/?error={urllib.parse.quote(error_message)}&plan_id={plan_id}')
             
             # Check if voucher exists and hasn't been used
-
-            # Create payment record
-            payment = Payment.objects.create(
-                user=request.user,
-                transaction_id=transaction_id,
-                amount=plan.price,
-                payment_date=datetime.now()
-            )
-            
-            # Check if there's a matching voucher
             try:
                 voucher = Voucher.objects.get(
                     transaction_id=transaction_id,
                     amount=plan.price,
-                    card_id=Payment.receiver_id_card,
-                    used=False  # Only get unused vouchers
+                    card_id=plan.receiver_id_card,  # Use the plan's specific receiver_id_card
+                    used=False
                 )
                 
                 # Create payment record
@@ -228,7 +206,8 @@ def subscribe(request, plan_id):
                     user=request.user,
                     transaction_id=transaction_id,
                     amount=plan.price,
-                    payment_date=datetime.now()
+                    payment_date=datetime.now(),
+                    receiver_id_card=plan.receiver_id_card  # Use the plan's specific receiver_id_card
                 )
                 
                 # Mark voucher as used
@@ -238,17 +217,11 @@ def subscribe(request, plan_id):
                 user_profile = request.user.profile
                 user_profile.update_plan(plan)
                 
-                # If voucher exists, payment is valid
-                # Update user's profile with the new plan
-                user_profile = request.user.profile
-                user_profile.plan = plan
-                user_profile.save()                
                 messages.success(request, f"¡Pago exitoso! Te has suscrito al plan {plan.plan_name}.")
                 return redirect('chat')
                 
             except Voucher.DoesNotExist:
                 # If no matching voucher found, payment is invalid
-                payment.delete()  # Remove the invalid payment record
                 error_message = "Pago no válido. Por favor verifica los datos de la transacción."
                 return redirect(f'/plans/?error={urllib.parse.quote(error_message)}&plan_id={plan_id}')
                 
@@ -647,7 +620,6 @@ def qualified_answers(request):
         results = json.loads(unquote(results_encoded))
         questions = json.loads(unquote(questions_encoded))
     except (ValueError, json.JSONDecodeError):
-        #print("Error decoding results:", e)
         results = {}
         questions = {}
 

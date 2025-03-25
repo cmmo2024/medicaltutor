@@ -93,7 +93,7 @@ class Voucher(models.Model):
 
 class Plan(models.Model):
     plan_id = models.AutoField(primary_key=True)
-    plan_name = models.TextField()
+    plan_name = models.CharField(max_length=255, null=False)
     receiver_id_card = models.CharField(max_length=255, null=False)
     qr_code = models.ImageField(upload_to='payment_qr/', default='payment_qr/payment-qr.jpg')
     phone_number = models.CharField(max_length=20, unique=True, null=False)

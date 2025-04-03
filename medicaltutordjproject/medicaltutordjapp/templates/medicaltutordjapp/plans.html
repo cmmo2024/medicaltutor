@@ -78,7 +78,7 @@
                     <!-- Transaction ID Input with Tooltip -->
                     <div class="transaction-input">
                         <label for="transaction-id">Nro. Transacción:</label>
-                        <input type="text" id="transaction-id" name="transaction_id" required>
+                        <input type="text" id="transaction-id" name="transaction_id" required style="text-transform: uppercase;" onkeyup="this.value = this.value.toUpperCase();">
                         <span class="tooltip">Escriba el número de transacción que aparece en el sms de PAGOxMOVIL en su celular después de realizada la transferencia.</span>
                     </div>
 

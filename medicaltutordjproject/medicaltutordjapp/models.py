@@ -53,7 +53,7 @@ class UserProfile(models.Model):
 
 class Payment(models.Model):
     payment_id = models.AutoField(primary_key=True)
-    transaction_id = models.TextField()  
+    transaction_id = models.CharField(max_length=255, null=False)  
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     amount = models.FloatField()
     payment_date = models.DateTimeField(blank=True, null=True)
@@ -72,7 +72,7 @@ class Payment(models.Model):
         
 class Voucher(models.Model):
     voucher_id = models.AutoField(primary_key=True)
-    transaction_id = models.TextField(unique=True)  # Make transaction_id unique
+    transaction_id = models.CharField(max_length=255, null=False, unique=True)  # Make transaction_id unique
     card_id = models.CharField(max_length=255, null=False)
     amount = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)

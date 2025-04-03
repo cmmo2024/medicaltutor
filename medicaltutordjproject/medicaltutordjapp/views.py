@@ -22,6 +22,7 @@ from urllib.parse import unquote
 from datetime import datetime
 
 from openai import OpenAI
+import os
 
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
 from medicaltutordjapp.models import Plan, Quizzes, UserStats, Payment, Voucher
@@ -31,7 +32,7 @@ from math import floor
 import json
 import urllib
 
-client = OpenAI(api_key='', base_url="https://openrouter.ai/api/v1")
+client = OpenAI(api_key=os.environ.get('API_KEY'), base_url="https://openrouter.ai/api/v1")
 
 def home(request):
     if request.user.is_authenticated:

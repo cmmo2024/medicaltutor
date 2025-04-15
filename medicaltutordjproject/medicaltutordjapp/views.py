@@ -16,6 +16,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
+from django.conf import settings
 
 from urllib.parse import unquote
  
@@ -32,7 +33,11 @@ from math import floor
 import json
 import urllib
 
-client = OpenAI(api_key=os.environ.get('API_KEY'), base_url="https://openrouter.ai/api/v1")
+client = OpenAI(api_key=os.environ.get("API_KEY"), base_url="https://openrouter.ai/api/v1")
+
+def get_app_file_path(*path_parts):
+    """Get absolute path to a file within the app directory"""
+    return os.path.join(settings.BASE_DIR, 'medicaltutordjapp', *path_parts)
 
 def home(request):
     if request.user.is_authenticated:
@@ -344,7 +349,11 @@ def generate_questions(request):
             data = json.loads(request.body)
             topic = data.get('topic', '')
             
-            with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+            json_path = get_app_file_path('utils', 'Summaries.json')
+            temp_file_path = get_app_file_path('tempfiles', 'generated_questions.gift')
+            html_file_path = get_app_file_path('templates', 'medicaltutordjapp', 'questions.html')
+            
+            with open(json_path, 'r', encoding='utf-8') as file:
                 summaries = json.load(file)
             
             if topic not in summaries:
@@ -431,15 +440,13 @@ def generate_questions(request):
 
             if not questions_gift:
                 raise ValueError("GPT API returned an empty response.")
-
+                
             # Save the GIFT questions to a temporary file
-            temp_file_path = '../medicaltutordjproject/medicaltutordjapp/tempfiles/generated_questions.gift'
             with open(temp_file_path, 'w', encoding='utf-8') as f:
                 f.write(questions_gift)
 
             # Parse the GIFT file into HTML format
             gift_parser = gisfttohtml(temp_file_path)
-            html_file_path = '../medicaltutordjproject/medicaltutordjapp/templates/medicaltutordjapp/questions.html'
             gift_parser.save_file(html_file_path)
 
             # Only decrement the quiz count after successful generation and before redirecting
@@ -523,42 +530,26 @@ def update_session(request):
 @login_required
 @require_http_methods(["POST"])
 def qualify_answers(request):
-    """Handle quiz answer qualification"""
     try:
-        # Parse JSON data from request body
         data = json.loads(request.body)
-        
-        # Get the GIFT file parser instance
-        gift_parser = gisfttohtml('../medicaltutordjproject/medicaltutordjapp/tempfiles/generated_questions.gift')
-        
-        # Get questions for response
+        gift_path = get_app_file_path('tempfiles', 'generated_questions.gift')
+        gift_parser = gisfttohtml(gift_path)
         questions = {i+1: q.text for i, q in enumerate(gift_parser.questions())}
-        
-        # Qualify the answers
         results = gift_parser.qualify_answers(data)
-        
-        # Calculate total score
         correct_answers = sum(1 for result in results.values() if result['result'])
         total_questions = len(results)
-        
-        # Calculate score with minimum of 2
         total_score = max(2, floor((correct_answers / total_questions) * 5))
         
-        # Load the subject-topic mapping
-        with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
+        json_path = get_app_file_path('utils', 'Summaries.json')
+        with open(json_path, 'r', encoding='utf-8') as file:
             subject_topics = json.load(file)
             
-        # Get current topic from session
         current_topic = request.session.get('current_topic', 'Unknown')
-        
-        # Determine the correct subject based on the topic
         current_subject = get_correct_subject(current_topic, subject_topics)
         
-        # If subject wasn't found, use the session's subject as fallback
         if not current_subject:
             current_subject = request.session.get('current_subject', 'Unknown')
         
-        # Save quiz results to database
         if request.user.is_authenticated:
             quiz = Quizzes.objects.create(
                 user=request.user,
@@ -569,14 +560,10 @@ def qualify_answers(request):
                 created_at=datetime.now()
             )
             
-            # Get or create user stats
             stats, created = UserStats.objects.get_or_create(user=request.user)
-            
-            # Update user stats
             stats.total_quizzes = (stats.total_quizzes or 0) + 1
             stats.last_activity = datetime.now()
             
-            # Update average score
             if stats.average_score is None:
                 stats.average_score = total_score
             else:
@@ -632,20 +619,22 @@ def qualified_answers(request):
 
 @login_required
 def statistics(request):
-    # Get user stats
     user_stats, created = UserStats.objects.get_or_create(user=request.user)
-    
-    # Get the 10 most recent quizzes for the user
     recent_quizzes = Quizzes.objects.filter(user=request.user).order_by('-created_at')[:10]
     
-    # Load subject-topic mapping to validate subjects
-    with open("../medicaltutordjproject/medicaltutordjapp/utils/Summaries.json", 'r', encoding='utf-8') as file:
-        subject_topics = json.load(file)
+    json_path = get_app_file_path('utils', 'Summaries.json')
+    try:
+        with open(json_path, 'r', encoding='utf-8') as file:
+            subject_topics = json.load(file)
+    except FileNotFoundError:
+        subject_topics = {}
+        print(f"Error: Summaries.json not found at {json_path}")
+    except json.JSONDecodeError:
+        subject_topics = {}
+        print(f"Error: Invalid JSON in Summaries.json at {json_path}")
     
-    # Get subject averages from UserStats and validate them
     subject_averages = []
     for subject, score in user_stats.subject_averages.items():
-        # Only include valid subjects from our mapping
         if subject in subject_topics:
             subject_averages.append({
                 'matter': subject,
@@ -657,3 +646,5 @@ def statistics(request):
         'recent_quizzes': recent_quizzes,
         'subject_averages': subject_averages
     })
+
+

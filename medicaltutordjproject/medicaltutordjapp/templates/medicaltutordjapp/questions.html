@@ -11,103 +11,117 @@
 <body>
 <form id="questions-form" action="/qualify_answers/" method="POST">
 {% csrf_token %}
-<h3>1. ¿Qué demostró el experimento de Miller-Urey de 1953?</h3>
+<h3>1. ¿Qué define a un proceso anfibólico en el metabolismo?</h3>
 
                             <label>
-                                <input type="radio" name="q1" value="Síntesis de aminoácidos">
-                                Síntesis de aminoácidos
+                                <input type="radio" name="q1" value="Proceso que integra funciones anabólicas y catabólicas">
+                                Proceso que integra funciones anabólicas y catabólicas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Síntesis de ADN">
-                                Síntesis de ADN
+                                <input type="radio" name="q1" value="Sólo proceso de síntesis de moléculas complejas">
+                                Sólo proceso de síntesis de moléculas complejas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Formación de células eucariotas">
-                                Formación de células eucariotas
+                                <input type="radio" name="q1" value="Sólo proceso de descomposición de moléculas">
+                                Sólo proceso de descomposición de moléculas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q1" value="Degradación de ARN">
-                                Degradación de ARN
+                                <input type="radio" name="q1" value="Proceso que libera energía sin síntesis">
+                                Proceso que libera energía sin síntesis
                             </label><br>
                         
-<h3>2. La atmósfera primitiva de la Tierra tenía abundante oxígeno libre.</h3>
+<h3>2. ¿Cuál de los siguientes es un ejemplo de proceso anfibólico?</h3>
+
+                            <label>
+                                <input type="radio" name="q2" value="Ciclo de Krebs">
+                                Ciclo de Krebs
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="Oxidación de grasas">
+                                Oxidación de grasas
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="Fosforilación oxidativa">
+                                Fosforilación oxidativa
+                            </label><br>
+                        
+
+                            <label>
+                                <input type="radio" name="q2" value="Síntesis de grasas">
+                                Síntesis de grasas
+                            </label><br>
+                        
+<h3>3. ¿El ciclo de Cori es un proceso anfibólico?</h3>
 
                         <label>
-                            <input type="radio" name="q2" value="T">
+                            <input type="radio" name="q3" value="T">
                             V
                         </label><br>
                         <label>
-                            <input type="radio" name="q2" value="F">
+                            <input type="radio" name="q3" value="F">
                             F
                         </label><br>
                     
-<h3>3. Según la hipótesis del mundo de ARN, ¿qué molécula podría almacenar información y actuar como catalizador?</h3>
+<h3>4. Nombra tres procesos anfibólicos en el ser humano.</h3>
 
                             <label>
-                                <input type="radio" name="q3" value="ARN">
-                                ARN
+                                <input type="radio" name="q4" value="Ciclo de Krebs">
+                                Ciclo de Krebs
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="ADN">
-                                ADN
+                                <input type="radio" name="q4" value="Ciclo de la urea">
+                                Ciclo de la urea
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Proteínas">
-                                Proteínas
+                                <input type="radio" name="q4" value="Ciclo de Cori">
+                                Ciclo de Cori
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q3" value="Lípidos">
-                                Lípidos
+                                <input type="radio" name="q4" value="Metabolismo de los aminoácidos">
+                                Metabolismo de los aminoácidos
                             </label><br>
                         
-<h3>4. ¿Qué ambiente submarino se considera clave en la síntesis de moléculas prebióticas?</h3>
+<h3>5. ¿Cuál es la función principal de los procesos anfibólicos?</h3>
 
                             <label>
-                                <input type="radio" name="q4" value="Fuentes hidrotermales alcalinas">
-                                Fuentes hidrotermales alcalinas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q4" value="Arrecifes de coral">
-                                Arrecifes de coral
+                                <input type="radio" name="q5" value="Integrar vías anabólicas y catabólicas para mantener el equilibrio celular">
+                                Integrar vías anabólicas y catabólicas para mantener el equilibrio celular
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q4" value="Fosas oceánicas">
-                                Fosas oceánicas
+                                <input type="radio" name="q5" value="Producir energía ATP sin síntesis de moléculas">
+                                Producir energía ATP sin síntesis de moléculas
                             </label><br>
                         
 
                             <label>
-                                <input type="radio" name="q4" value="Lagunas costeras">
-                                Lagunas costeras
+                                <input type="radio" name="q5" value="Sólo sintetizar moléculas complejas">
+                                Sólo sintetizar moléculas complejas
                             </label><br>
                         
-<h3>5. La panspermia explica el origen químico de la vida en la Tierra.</h3>
 
-                        <label>
-                            <input type="radio" name="q5" value="T">
-                            V
-                        </label><br>
-                        <label>
-                            <input type="radio" name="q5" value="F">
-                            F
-                        </label><br>
-                    
+                            <label>
+                                <input type="radio" name="q5" value="Eliminar residuos metabólicos">
+                                Eliminar residuos metabólicos
+                            </label><br>
+                        
 <!-- Modal Dialog -->
         <div id="confirmation-dialog" class="modal">
             <div class="modal-content">

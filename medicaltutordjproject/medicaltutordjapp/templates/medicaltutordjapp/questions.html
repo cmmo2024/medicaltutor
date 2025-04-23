@@ -1,146 +1,16 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-                            <meta charset="UTF-8">
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <title>Cuestionario</title>
-                            {% load static %}
-                            <link rel="stylesheet" href="{% static 'css/common.css' %}"
-                            <link rel="stylesheet" href="{% static 'css/questions.css' %}">
-                        </head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'css/questions.css' %}">
+</head>
 <body>
-<form id="questions-form" action="/qualify_answers/" method="POST">
-{% csrf_token %}
-<h3>1. ¿Qué define a un proceso anfibólico en el metabolismo?</h3>
-
-                            <label>
-                                <input type="radio" name="q1" value="Proceso que integra funciones anabólicas y catabólicas">
-                                Proceso que integra funciones anabólicas y catabólicas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q1" value="Sólo proceso de síntesis de moléculas complejas">
-                                Sólo proceso de síntesis de moléculas complejas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q1" value="Sólo proceso de descomposición de moléculas">
-                                Sólo proceso de descomposición de moléculas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q1" value="Proceso que libera energía sin síntesis">
-                                Proceso que libera energía sin síntesis
-                            </label><br>
-                        
-<h3>2. ¿Cuál de los siguientes es un ejemplo de proceso anfibólico?</h3>
-
-                            <label>
-                                <input type="radio" name="q2" value="Ciclo de Krebs">
-                                Ciclo de Krebs
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Oxidación de grasas">
-                                Oxidación de grasas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Fosforilación oxidativa">
-                                Fosforilación oxidativa
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q2" value="Síntesis de grasas">
-                                Síntesis de grasas
-                            </label><br>
-                        
-<h3>3. ¿El ciclo de Cori es un proceso anfibólico?</h3>
-
-                        <label>
-                            <input type="radio" name="q3" value="T">
-                            V
-                        </label><br>
-                        <label>
-                            <input type="radio" name="q3" value="F">
-                            F
-                        </label><br>
-                    
-<h3>4. Nombra tres procesos anfibólicos en el ser humano.</h3>
-
-                            <label>
-                                <input type="radio" name="q4" value="Ciclo de Krebs">
-                                Ciclo de Krebs
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q4" value="Ciclo de la urea">
-                                Ciclo de la urea
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q4" value="Ciclo de Cori">
-                                Ciclo de Cori
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q4" value="Metabolismo de los aminoácidos">
-                                Metabolismo de los aminoácidos
-                            </label><br>
-                        
-<h3>5. ¿Cuál es la función principal de los procesos anfibólicos?</h3>
-
-                            <label>
-                                <input type="radio" name="q5" value="Integrar vías anabólicas y catabólicas para mantener el equilibrio celular">
-                                Integrar vías anabólicas y catabólicas para mantener el equilibrio celular
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q5" value="Producir energía ATP sin síntesis de moléculas">
-                                Producir energía ATP sin síntesis de moléculas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q5" value="Sólo sintetizar moléculas complejas">
-                                Sólo sintetizar moléculas complejas
-                            </label><br>
-                        
-
-                            <label>
-                                <input type="radio" name="q5" value="Eliminar residuos metabólicos">
-                                Eliminar residuos metabólicos
-                            </label><br>
-                        
-<!-- Modal Dialog -->
-        <div id="confirmation-dialog" class="modal">
-            <div class="modal-content">
-                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez calificado ¡Revisa bien!</p>
-                <input type="submit" value="Calificar">
-                <button onclick="closeDialog()" type="button">Seguir revisando</button>
-            </div>
-        </div>
-        <!-- Modal Dialog for "Regresar al chat" -->
-        <div id="chat-confirmation-dialog" class="modal">
-            <div class="modal-content">
-                <p>¿Seguro que quieres regresar al chat? Perderás el progreso en este cuestionario.</p>
-                <button id="confirm-go-home-button" type="button">Regresar al chat</button>
-                <button onclick="closeDialog()" type="button">Seguir revisando</button>
-            </div>
-        </div>
-        <div id="overlay" class="modal-overlay"></div>
-</form>
-<script src="{% static 'js/submitHandler.js' %}"></script>
-<br><button onclick="showDialog()">Continuar</button>
-<button onclick="showChatDialog()">Regresar al chat</button>
+    {{ questions_html|safe }}
+    
+    <script src="{% static 'js/submitHandler.js' %}"></script>
 </body>
+</html>

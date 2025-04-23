@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calificación</title>
-    {% load custom_filters %}
     {% load static %}
+    {% load custom_filters %}
     <script src="{% static 'js/qualificationsHandler.js' %}"></script>
     <link rel="stylesheet" href="{% static 'css/common.css' %}">
-    
 </head>
 <body>
+    <h1 class="subject-header">{{ subject }}</h1>
+    <h2 class="topic-header">{{ topic }}</h2>
+
     <h2>Nota: {{ score }}/5</h2>
     <hr>
 
@@ -18,17 +20,23 @@
     <ul>
         {% for question_id, result in results.items %}
             <li>
-                Pregunta: {{ questions|get_item:question_id }}
-                <br>Tu respuesta: <strong>{{ result.user_answer }}</strong>
-                {% if result.result %}
-                    <span style="color: green;">Correcto</span>
-                {% else %}
-                    <span style="color: red;">Incorrecto</span>
-                    - La repuesta correcta es: {{ result.correct_answer }}
-                {% endif %}
+                {% with question_text=questions|get_item:question_id %}
+                    Pregunta: {{ question_text }}
+                    <br>Tu respuesta: <strong>{{ result.user_answer|default:"Sin respuesta" }}</strong>
+                    {% if result.result %}
+                        <span style="color: green;">Correcto</span>
+                    {% else %}
+                        <span style="color: red;">Incorrecto</span>
+                        - La repuesta correcta es: {{ result.correct_answer }}
+                    {% endif %}
+                {% endwith %}
             </li>
         {% endfor %}
     </ul>
+
+    <input type="hidden" id="current-subject" value="{{ subject }}">
+    <input type="hidden" id="current-topic" value="{{ topic }}">
+    <input type="hidden" id="chat-content" value="{{ chat_content }}">
 
     <button id="go-home-button">Regresar al chat</button>
     <button id="retry-button" onclick="checkQuizLimit()">Reintentar</button>
@@ -87,6 +95,19 @@
             <button onclick="closePlanUpgradeDialog()" class="btn">Cancelar</button>
         </div>
     </div>
+
+    <script>
+        // Store the current state in localStorage when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const subject = document.getElementById('current-subject').value;
+            const topic = document.getElementById('current-topic').value;
+            const chatContent = document.getElementById('chat-content').value;
+            
+            if (subject) localStorage.setItem('currentSubject', subject);
+            if (topic) localStorage.setItem('currentTopic', topic);
+            if (chatContent) localStorage.setItem('lastChatContent', chatContent);
+        });
+    </script>
     
 </body>
 </html>

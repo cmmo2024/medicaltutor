@@ -72,7 +72,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Handle "Calificar" button inside the modal
     var submitButton = dialog.querySelector("input[type='submit']");
     if (submitButton) {
-        submitButton.addEventListener("click", function () {
+        submitButton.addEventListener("click", function (e) {
+            e.preventDefault();
             disableInputs();
         
             // Collect form data
@@ -99,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             });
 
-            // Submit form data using fetch
+            // Submit form data using fetch with proper error handling
             fetch("/qualify_answers/", {
                 method: "POST",
                 headers: {
@@ -107,7 +108,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(formData),
+                credentials: 'same-origin'
             })
             .then(response => {
                 if (!response.ok) {
@@ -117,23 +119,26 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(data => {
                 if (data.error) {
-                    alert(`Error: ${data.error}`);
-                    enableInputs();
-                    return;
+                    throw new Error(data.error);
                 }
 
-                const encodedResults = encodeURIComponent(JSON.stringify(data.result));
-                const encodedQuestions = encodeURIComponent(JSON.stringify(data.questions));
-                window.location.href = `/qualified_answers/?score=${data.total_score}&results=${encodedResults}&questions=${encodedQuestions}`;
+                try {
+                    const encodedResults = encodeURIComponent(JSON.stringify(data.result));
+                    const encodedQuestions = encodeURIComponent(JSON.stringify(data.questions));
+                    window.location.href = `/qualified_answers/?score=${data.total_score}&results=${encodedResults}&questions=${encodedQuestions}`;
+                } catch (err) {
+                    throw new Error('Error processing response data');
+                }
             })
             .catch(error => {
-                console.error('Fetch request failed:', error);
-                alert('An error occurred while submitting the form.');
+                console.error('Error submitting form:', error);
+                alert('Ocurrió un error al calificar las respuestas. Por favor, intente nuevamente.');
                 enableInputs();
+            })
+            .finally(() => {
+                dialog.style.display = "none";
+                overlay.style.display = "none";
             });
-
-            dialog.style.display = "none";
-            overlay.style.display = "none";
         });
     }
 
@@ -149,6 +154,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({})
             })
             .then(response => {

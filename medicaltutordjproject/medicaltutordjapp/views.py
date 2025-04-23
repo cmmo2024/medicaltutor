@@ -17,13 +17,13 @@ from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.conf import settings
+from django.template import Template, Context
 
 from urllib.parse import unquote
  
 from datetime import datetime
 
 from openai import OpenAI
-import os
 
 from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
 from medicaltutordjapp.models import Plan, Quizzes, UserStats, Payment, Voucher
@@ -32,6 +32,8 @@ from math import floor
 
 import json
 import urllib
+import os
+import uuid
 
 client = OpenAI(api_key=os.environ.get("API_KEY"), base_url="https://openrouter.ai/api/v1")
 
@@ -348,26 +350,33 @@ def generate_questions(request):
             # Parse request data
             data = json.loads(request.body)
             topic = data.get('topic', '')
+            subject = data.get('subject', '')
+            
+            if not topic or not subject:
+                return JsonResponse({'error': 'Topic and subject are required'}, status=400)
             
             json_path = get_app_file_path('utils', 'Summaries.json')
-            temp_file_path = get_app_file_path('tempfiles', 'generated_questions.gift')
-            html_file_path = get_app_file_path('templates', 'medicaltutordjapp', 'questions.html')
+            
+            # Create a unique file path for this user session
+            user_id = request.user.id if request.user.is_authenticated else 'anonymous'
+            session_id = request.session.session_key or 'default'
+            temp_file_base = f'generated_questions_{user_id}_{session_id}'
+            
+            temp_gift_path = get_app_file_path('tempfiles', f'{temp_file_base}.gift')
+            temp_html_path = get_app_file_path('tempfiles', f'{temp_file_base}.html')
             
             with open(json_path, 'r', encoding='utf-8') as file:
                 summaries = json.load(file)
             
-            if topic not in summaries:
+            if subject not in summaries or topic not in summaries[subject]:
                 summary = ", nevermind there's no summary about this topic"
             else:
-                summary = summaries[topic]
+                summary = str(summaries[subject][topic])
             
             conversation = data.get('conversation', '')
             num_questions = data.get('numQuestions', 3)
 
-            if not topic:
-                return JsonResponse({'error': 'Topic is missing'}, status=400)
-
-            # Updated GIFT instructions with more examples
+            # Updated GIFT instructions without Short Answer
             instructions = """
             General instructions for GIFT format:
 
@@ -386,11 +395,7 @@ def generate_questions(request):
             Grant was buried in a tomb in New York City.{T}
             The sun rises in the West.{FALSE}
 
-            4. Short Answer:
-            Who's buried in Grant's tomb?{=Grant =Ulysses S. Grant =Ulysses Grant}
-            Two plus two equals {=four =4}
-
-            5. Matching:
+            4. Matching:
             Match the following countries with their capitals. {
                =Canada -> Ottawa
                =Italy  -> Rome
@@ -398,10 +403,10 @@ def generate_questions(request):
                =India  -> New Delhi
             }
 
-            6. Missing Word:
+            5. Missing Word:
             Mahatma Gandhi's birthday is an Indian holiday on {~15th ~3rd =2nd} of October.
 
-            7. Numerical:
+            6. Numerical:
             Simple range: When was Ulysses S. Grant born?{#1822:5}
             Precise value: What is pi (3 decimals)?{#3.141..3.142}
             Multiple ranges: When was Grant born?{#=1822:0 =%50%1822:2}
@@ -414,19 +419,19 @@ def generate_questions(request):
             - For numerical, use # and specify ranges with : or ..
             - For matching, minimum three pairs with ->
             - Avoid HTML tags in questions/answers
-            - Don't write the question's type.
+            - Don't write the question's type
             - Don't show feedback for answers
             - Use UTF-8 encoding to support special characters
             - Ensure no introductory text, comments, or extra formatting in the output
-
-            f"Generate clean GIFT format questions in the {conversation} language, strictly following these guidelines."
+            - DO NOT generate Short Answer questions
             """
 
             # Generate questions using GPT
             prompt = (
-                f"Generate exactly {num_questions} GIFT-format questions about the topic: {topic} and this context: {conversation}. Prioritize this {summary}"
-                f"Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
+                f"Generate exactly {num_questions} GIFT-format questions in the user language about the topic: {topic} from {subject} and this context: {conversation}. "
+                f"Prioritize this summary: {summary}. Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
             )
+            
             response = client.chat.completions.create(
                 model="qwen/qwq-32b:free",
                 messages=[{"role": "user", "content": prompt}],
@@ -442,12 +447,16 @@ def generate_questions(request):
                 raise ValueError("GPT API returned an empty response.")
                 
             # Save the GIFT questions to a temporary file
-            with open(temp_file_path, 'w', encoding='utf-8') as f:
+            with open(temp_gift_path, 'w', encoding='utf-8') as f:
                 f.write(questions_gift)
 
             # Parse the GIFT file into HTML format
-            gift_parser = gisfttohtml(temp_file_path)
-            gift_parser.save_file(html_file_path)
+            gift_parser = gisfttohtml(temp_gift_path)
+            gift_parser.save_file(temp_html_path)
+
+            # Store the paths in the session for later use
+            request.session['temp_gift_path'] = temp_gift_path
+            request.session['temp_html_path'] = temp_html_path
 
             # Only decrement the quiz count after successful generation and before redirecting
             if request.user.is_authenticated:
@@ -465,8 +474,25 @@ def generate_questions(request):
     return JsonResponse({'error': 'This endpoint only accepts POST requests.'}, status=400)
 
 def questions(request):
-    # This view only handles GET requests to render the questions page
-    return render(request, 'medicaltutordjapp/questions.html')
+    # Get the user-specific HTML file path from the session
+    temp_html_path = request.session.get('temp_html_path')
+    
+    if not temp_html_path or not os.path.exists(temp_html_path):
+        return redirect('chat')  # Redirect if no questions are generated
+        
+    try:
+        with open(temp_html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+            
+        # Parse the HTML content as a template
+        template = Template(html_content)
+        context = Context({'csrf_token': request.CSRF_token if hasattr(request, 'CSRF_token') else None})
+        rendered_html = template.render(context)
+        
+        return render(request, 'medicaltutordjapp/questions.html', {'questions_html': rendered_html})
+    except Exception as e:
+        print(f"Error rendering questions: {e}")
+        return redirect('chat')
 
 def get_correct_subject(topic, subject_topics):
     """Helper function to get the correct subject for a given topic"""
@@ -527,61 +553,99 @@ def update_session(request):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@login_required
-@require_http_methods(["POST"])
+@csrf_exempt
 def qualify_answers(request):
-    try:
-        data = json.loads(request.body)
-        gift_path = get_app_file_path('tempfiles', 'generated_questions.gift')
-        gift_parser = gisfttohtml(gift_path)
-        questions = {i+1: q.text for i, q in enumerate(gift_parser.questions())}
-        results = gift_parser.qualify_answers(data)
-        correct_answers = sum(1 for result in results.values() if result['result'])
-        total_questions = len(results)
-        total_score = max(2, floor((correct_answers / total_questions) * 5))
-        
-        json_path = get_app_file_path('utils', 'Summaries.json')
-        with open(json_path, 'r', encoding='utf-8') as file:
-            subject_topics = json.load(file)
+    if request.method == 'POST':
+        try:
+            # Get the answers from the request
+            data = json.loads(request.body)
             
-        current_topic = request.session.get('current_topic', 'Unknown')
-        current_subject = get_correct_subject(current_topic, subject_topics)
-        
-        if not current_subject:
-            current_subject = request.session.get('current_subject', 'Unknown')
-        
-        if request.user.is_authenticated:
-            quiz = Quizzes.objects.create(
-                user=request.user,
-                topic=current_topic,
-                matter=current_subject,
-                questions_count=total_questions,
-                score=total_score,
-                created_at=datetime.now()
-            )
+            # Get the GIFT file path from the session
+            temp_gift_path = request.session.get('temp_gift_path')
+            if not temp_gift_path or not os.path.exists(temp_gift_path):
+                return JsonResponse({'error': 'Questions file not found'}, status=500)
             
-            stats, created = UserStats.objects.get_or_create(user=request.user)
-            stats.total_quizzes = (stats.total_quizzes or 0) + 1
-            stats.last_activity = datetime.now()
+            try:
+                # Parse and qualify
+                gift_parser = gisfttohtml(temp_gift_path)
+                questions = {str(i+1): q.text for i, q in enumerate(gift_parser.questions())}
+                results = gift_parser.qualify_answers(data)
+                
+                # Add user answers to results
+                for q_id, result in results.items():
+                    user_answer = data.get(f"q{q_id}")
+                    if isinstance(user_answer, list):
+                        result['user_answer'] = ', '.join(user_answer)
+                    else:
+                        result['user_answer'] = user_answer if user_answer else "Sin respuesta"
+                
+                # Calculate score using the original method
+                correct_answers = sum(1 for result in results.values() if result['result'])
+                total_questions = len(results)
+                score = max(2,floor(5 * (correct_answers / total_questions)))
+                
+                # Save quiz results if user is authenticated
+                if request.user.is_authenticated:
+                    user_session_key = f'user_{request.user.id}_chat'
+                    user_session = request.session.get(user_session_key, {})
+                    current_subject = user_session.get('current_subject', '')
+                    current_topic = user_session.get('current_topic', '')
+                    
+                    if current_subject and current_topic:
+                        quiz = Quizzes.objects.create(
+                            user=request.user,
+                            topic=current_topic,
+                            matter=current_subject,
+                            questions_count=total_questions,
+                            score=score,
+                            created_at=datetime.now()
+                        )
+                        
+                        # Update user stats
+                        stats = request.user.profile.stats
+                        if stats:
+                            # Update total quizzes
+                            stats.total_quizzes = (stats.total_quizzes or 0) + 1
+                            stats.last_activity = datetime.now()
+                            
+                            # Update average score
+                            if stats.average_score is None:
+                                stats.average_score = score
+                            else:
+                                stats.average_score = (stats.average_score * (stats.total_quizzes - 1) + score) / stats.total_quizzes
+                            
+                            # Update subject averages
+                            subject_averages = stats.subject_averages or {}
+                            if current_subject in subject_averages:
+                                old_avg = subject_averages[current_subject]
+                                subject_count = sum(1 for q in Quizzes.objects.filter(user=request.user) if q.matter == current_subject)
+                                new_avg = (old_avg * (subject_count - 1) + score) / subject_count
+                                subject_averages[current_subject] = new_avg
+                            else:
+                                subject_averages[current_subject] = score
+                            
+                            stats.subject_averages = subject_averages
+                            stats.save()
+                
+                # Keep the files until after the results are displayed
+                return JsonResponse({
+                    'result': results,
+                    'total_score': score,
+                    'questions': questions
+                })
+                
+            except Exception as e:
+                if os.path.exists(temp_gift_path):
+                    os.remove(temp_gift_path)
+                html_path = request.session.get('temp_html_path')
+                if html_path and os.path.exists(html_path):
+                    os.remove(html_path)
+                raise e
+                    
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
             
-            if stats.average_score is None:
-                stats.average_score = total_score
-            else:
-                stats.average_score = (stats.average_score * (stats.total_quizzes - 1) + total_score) / stats.total_quizzes
-            
-            stats.save()
-            stats.update_subject_averages()
-        
-        return JsonResponse({
-            'result': results,
-            'questions': questions,
-            'total_score': total_score
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @login_required
 @require_http_methods(["POST"])
@@ -602,6 +666,14 @@ def qualified_answers(request):
     score = request.GET.get('score', 0)
     results_encoded = request.GET.get('results', '')
     questions_encoded = request.GET.get('questions', '')
+    
+    # Get the current subject and topic from the session
+    user_session_key = f'user_{request.user.id}_chat'
+    user_session = request.session.get(user_session_key, {})
+    
+    current_subject = user_session.get('current_subject', '')
+    current_topic = user_session.get('current_topic', '')
+    chat_content = user_session.get('chat_content', '')
 
     try:
         # Decode URL-encoded JSON
@@ -611,10 +683,26 @@ def qualified_answers(request):
         results = {}
         questions = {}
 
+    # Clean up temporary files after results are displayed
+    temp_gift_path = request.session.get('temp_gift_path')
+    if temp_gift_path and os.path.exists(temp_gift_path):
+        os.remove(temp_gift_path)
+    
+    temp_html_path = request.session.get('temp_html_path')
+    if temp_html_path and os.path.exists(temp_html_path):
+        os.remove(temp_html_path)
+    
+    # Clear the file paths from session
+    request.session.pop('temp_gift_path', None)
+    request.session.pop('temp_html_path', None)
+
     return render(request, "medicaltutordjapp/qualified_answers.html", {
         'score': score,
         'results': results,
-        'questions': questions
+        'questions': questions,
+        'subject': current_subject,
+        'topic': current_topic,
+        'chat_content': chat_content
     })
 
 @login_required
@@ -646,5 +734,6 @@ def statistics(request):
         'recent_quizzes': recent_quizzes,
         'subject_averages': subject_averages
     })
+
 
 

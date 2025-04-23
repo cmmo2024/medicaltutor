@@ -15,19 +15,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function checkQuizLimit() {
     // Check if user has remaining quizzes
-    fetch('/check_quiz_limit/')
-        .then(response => response.json())
-        .then(data => {
-            if (data.can_take_quiz) {
-                showQuestionDialog();
-            } else {
-                showPlanUpgradeDialog();
-            }
-        })
-        .catch(error => {
-            console.error('Error checking quiz limit:', error);
-            alert('Error al verificar el límite de cuestionarios. Por favor intente nuevamente.');
-        });
+    fetch('/check_quiz_limit/', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.can_take_quiz) {
+            showQuestionDialog();
+        } else {
+            showPlanUpgradeDialog();
+        }
+    })
+    .catch(error => {
+        console.error('Error checking quiz limit:', error);
+        alert('Error al verificar el límite de cuestionarios. Por favor intente nuevamente.');
+    });
 }
 
 function showQuestionDialog() {
@@ -90,18 +95,33 @@ function continueToNextPage() {
 }
 
 function generateQuestions(numQuestions) {
-    const topic = localStorage.getItem('selectedTopic') || 'General';
+    // Get values from hidden inputs
+    const currentSubject = document.getElementById('current-subject').value;
+    const currentTopic = document.getElementById('current-topic').value;
+    const chatContent = document.getElementById('chat-content').value;
+
+    if (!currentTopic || !currentSubject) {
+        alert('Error: No se pudo determinar el tema o la asignatura.');
+        const loadingDialog = document.getElementById('loading-dialog');
+        if (loadingDialog) {
+            loadingDialog.style.display = 'none';
+        }
+        return;
+    }
 
     fetch(`/generate_questions/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
-            topic,
-            numQuestions,
-            conversation: ''
+            topic: currentTopic,
+            subject: currentSubject,
+            numQuestions: numQuestions,
+            conversation: chatContent
         })
     })
     .then(response => {
@@ -114,9 +134,9 @@ function generateQuestions(numQuestions) {
         if (data.redirect_url) {
             window.location.href = data.redirect_url;
         } else if (data.error) {
-            alert(`Error: ${data.error}`);
+            throw new Error(data.error);
         } else {
-            alert('Unexpected response from the server.');
+            throw new Error('Unexpected response from the server.');
         }
     })
     .catch(error => {
@@ -136,3 +156,5 @@ function getCSRFToken() {
     const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken'));
     return cookie ? cookie.split('=')[1] : null;
 }
+
+

@@ -7,6 +7,7 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/common.css' %}">
     <link rel="stylesheet" href="{% static 'css/statistics.css' %}">
+    <script src="{% static 'js/statistics.js' %}"></script>
 </head>
 <body>
     <div class="stats-container">
@@ -28,7 +29,9 @@
                 </div>
                 <div class="stat-card">
                     <h3>Última Actividad</h3>
-                    <p>{{ user_stats.last_activity|date:"d/m/Y h:i A"|default:"Sin actividad" }}</p>
+                    <p id="last-activity" data-timestamp="{{ user_stats.last_activity|date:'c' }}">
+                        {{ user_stats.last_activity|date:"d/m/Y h:i A"|default:"Sin actividad" }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -76,7 +79,9 @@
                         <tbody>
                             {% for quiz in recent_quizzes %}
                             <tr>
-                                <td>{{ quiz.created_at|date:"d/m/Y h:i A" }}</td>
+                                <td class="quiz-date" data-timestamp="{{ quiz.created_at|date:'c' }}">
+                                    {{ quiz.created_at|date:"d/m/Y h:i A" }}
+                                </td>
                                 <td>{{ quiz.matter }}</td>
                                 <td>{{ quiz.topic }}</td>
                                 <td>{{ quiz.questions_count }}</td>

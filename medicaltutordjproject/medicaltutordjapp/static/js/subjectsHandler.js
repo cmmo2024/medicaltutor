@@ -40,13 +40,22 @@ document.addEventListener("DOMContentLoaded", function () {
     fetch('/get_session_data/', {
         method: 'GET',
         headers: {
-            'X-CSRFToken': getCSRFToken()
-        }
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
     })
     .then(response => response.json())
     .then(data => {
         if (data.subject && data.topic) {
             selectedSubject = data.subject;
+            
+            // Store in localStorage for navigation
+            localStorage.setItem('currentSubject', data.subject);
+            localStorage.setItem('currentTopic', data.topic);
+            if (data.chat_content) {
+                localStorage.setItem('lastChatContent', data.chat_content);
+            }
             
             // Find and activate the correct accordion
             const accordions = document.querySelectorAll('.accordion');
@@ -79,19 +88,64 @@ function selectSubject(element) {
 
     // Update the selected subject
     selectedSubject = element.getAttribute('data-subject');
+    localStorage.setItem('currentSubject', selectedSubject);
     
     // Update session data
     updateSessionData(selectedSubject, null);
 }
 
-// Update the updateSessionData function
+function loadTopic(topic, savedContent = null) {
+    const chatContent = document.getElementById('chat-content');
+    
+    document.getElementById('topic-title').innerText = topic;
+    localStorage.setItem('currentTopic', topic);
+
+    if (savedContent) {
+        chatContent.innerHTML = savedContent;
+        localStorage.setItem('lastChatContent', savedContent);
+        hasGPTResponded = chatContent.querySelector('.bot-message') !== null;
+    } else if (chatJustCleared || chatContent.innerHTML.trim() === "") {
+        const welcomeMessage = `<p>Comenzemos a repasar sobre ${topic}. No dudes en hacer preguntas!</p>`;
+        chatContent.innerHTML = welcomeMessage;
+        localStorage.setItem('lastChatContent', welcomeMessage);
+        chatJustCleared = false;
+    } else {
+        const topicSeparator = document.createElement('div');
+        topicSeparator.style.borderTop = '2px solid #ccc';
+        topicSeparator.style.margin = '20px 0';
+        topicSeparator.style.padding = '10px 0';
+        topicSeparator.innerHTML = `<strong>Nuevo tema: ${topic}</strong>`;
+        chatContent.appendChild(topicSeparator);
+
+        const welcomeMessage = document.createElement('p');
+        welcomeMessage.textContent = `Comenzemos a repasar sobre ${topic}. No dudes en hacer preguntas!`;
+        chatContent.appendChild(welcomeMessage);
+        localStorage.setItem('lastChatContent', chatContent.innerHTML);
+    }
+    
+    document.getElementById('user-input').disabled = false;
+    document.getElementById('send-button').disabled = false;
+    document.getElementById('clear-button').disabled = false;
+    document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
+
+    isTopicSelected = true;
+    
+    // Update session data with current subject, topic and chat content
+    updateSessionData(selectedSubject, topic, chatContent.innerHTML);
+
+    // Scroll to the bottom to show the new topic section
+    chatContent.scrollTop = chatContent.scrollHeight;
+}
+
 function updateSessionData(subject, topic, chatContent) {
     fetch('/update_session/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
             subject: subject,
             topic: topic,
@@ -107,44 +161,6 @@ function updateSessionData(subject, topic, chatContent) {
     .catch(error => {
         console.error('Error updating session:', error);
     });
-}
-
-function loadTopic(topic, savedContent = null) {
-    const chatContent = document.getElementById('chat-content');
-    
-    document.getElementById('topic-title').innerText = topic;
-
-    if (savedContent) {
-        chatContent.innerHTML = savedContent;
-        hasGPTResponded = chatContent.querySelector('.bot-message') !== null;
-    } else if (chatJustCleared || chatContent.innerHTML.trim() === "") {
-        chatContent.innerHTML = `<p>Comenzemos a repasar sobre ${topic}. No dudes en hacer preguntas!</p>`;
-        chatJustCleared = false;
-    } else {
-        const topicSeparator = document.createElement('div');
-        topicSeparator.style.borderTop = '2px solid #ccc';
-        topicSeparator.style.margin = '20px 0';
-        topicSeparator.style.padding = '10px 0';
-        topicSeparator.innerHTML = `<strong>Nuevo tema: ${topic}</strong>`;
-        chatContent.appendChild(topicSeparator);
-
-        const welcomeMessage = document.createElement('p');
-        welcomeMessage.textContent = `Comenzemos a repasar sobre ${topic}. No dudes en hacer preguntas!`;
-        chatContent.appendChild(welcomeMessage);
-    }
-    
-    document.getElementById('user-input').disabled = false;
-    document.getElementById('send-button').disabled = false;
-    document.getElementById('clear-button').disabled = false;
-    document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
-
-    isTopicSelected = true;
-    
-    // Update session data with current subject, topic and chat content
-    updateSessionData(selectedSubject, topic, chatContent.innerHTML);
-
-    // Scroll to the bottom to show the new topic section
-    chatContent.scrollTop = chatContent.scrollHeight;
 }
 
 function sendMessage() {
@@ -226,6 +242,7 @@ function sendMessage() {
 
                 // Update session with new chat content
                 updateSessionData(selectedSubject, topic, chatContent.innerHTML);
+                localStorage.setItem('lastChatContent', chatContent.innerHTML);
                 
                 document.getElementById('ask-questions-btn').disabled = false;
             })
@@ -239,6 +256,7 @@ function sendMessage() {
                 
                 // Update session even on error to preserve the error message
                 updateSessionData(selectedSubject, topic, chatContent.innerHTML);
+                localStorage.setItem('lastChatContent', chatContent.innerHTML);
             });
 
         input.value = '';
@@ -252,6 +270,11 @@ function clearChat() {
     
     // Update session to clear the chat
     updateSessionData(null, null, null);
+    
+    // Clear localStorage
+    localStorage.removeItem('currentSubject');
+    localStorage.removeItem('currentTopic');
+    localStorage.removeItem('lastChatContent');
 
     // Disable buttons after clearing
     document.getElementById('user-input').disabled = true;
@@ -264,38 +287,32 @@ function clearChat() {
     chatJustCleared = true;
 }
 
-// Function to show plan upgrade message
 function showPlanUpgradeMessage() {
     document.getElementById('plan-upgrade-dialog').style.display = 'block';
 }
 
-// Function to close plan upgrade dialog
 function closePlanUpgradeDialog() {
     document.getElementById('plan-upgrade-dialog').style.display = 'none';
 }
 
-// Toggle sidebar navigation
 function toggleNav() {
     const sidebar = document.getElementById("mySidebar");
     const mainContent = document.getElementById("chat");
     const toggleButton = document.querySelector(".toggle-btn");
 
     if (sidebar.classList.contains("open")) {
-        // Close the sidebar
         sidebar.classList.remove("open");
-        sidebar.style.width = "0"; // Fully collapse the sidebar
-        mainContent.style.marginLeft = "0"; // Chat panel covers the sidebar
-        toggleButton.innerHTML = "&#9776;"; // Hamburger icon
+        sidebar.style.width = "0";
+        mainContent.style.marginLeft = "0";
+        toggleButton.innerHTML = "&#9776;";
     } else {
-        // Open the sidebar
         sidebar.classList.add("open");
-        sidebar.style.width = "250px"; // Adjust to sidebar width
-        mainContent.style.marginLeft = "250px"; // Align chat panel
-        toggleButton.innerHTML = "&times;"; // Close (X) icon
+        sidebar.style.width = "250px";
+        mainContent.style.marginLeft = "250px";
+        toggleButton.innerHTML = "&times;";
     }
 }
 
-// Handle 'Enter' key to send message
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         sendMessage();
@@ -303,14 +320,12 @@ function handleKeyPress(event) {
 }
 
 function showQuestionDialog() {
-    // Check if user has a paid plan with remaining quizzes
     fetch('/check_quiz_limit/')
         .then(response => response.json())
         .then(data => {
             if (data.can_take_quiz) {
                 document.getElementById('question-dialog').style.display = 'block';
             } else {
-                // Display message in chat that quiz limit is reached with fade-out effect
                 const chatContent = document.getElementById('chat-content');
                 const limitMessageElement = document.createElement('div');
                 limitMessageElement.className = 'error-message';
@@ -318,7 +333,6 @@ function showQuestionDialog() {
                     'Puedes seguir haciendo preguntas o adquirir un nuevo plan.';
                 chatContent.appendChild(limitMessageElement);
                 
-                // Remove the error message after 5 seconds
                 setTimeout(() => {
                     limitMessageElement.style.opacity = '0';
                     limitMessageElement.style.transform = 'translateY(-10px)';
@@ -327,7 +341,7 @@ function showQuestionDialog() {
                     }, 300);
                 }, 5000);
                 
-                saveChatContent();
+                localStorage.setItem('lastChatContent', chatContent.innerHTML);
             }
         })
         .catch(error => {
@@ -337,11 +351,10 @@ function showQuestionDialog() {
             errorMessageElement.className = 'error-message';
             errorMessageElement.textContent = 'Error al verificar el límite de cuestionarios. Por favor intente nuevamente.';
             chatContent.appendChild(errorMessageElement);
-            saveChatContent();
+            localStorage.setItem('lastChatContent', chatContent.innerHTML);
         });
 }
 
-// Close the question selection dialog
 function closeQuestionDialog() {
     document.getElementById('question-dialog').style.display = 'none';
 }
@@ -351,39 +364,41 @@ function continueToNextPage() {
 
     if (selectedOption) {
         const numQuestions = parseInt(selectedOption.value, 10);
-
-        // Close the question selection dialog
         closeQuestionDialog();
-
-        // Show the loading dialog
         document.getElementById('loading-dialog').style.display = 'block';
-
-        generateQuestions(numQuestions); // Call your generateQuestions method
+        generateQuestions(numQuestions);
     } else {
         alert('Please select the number of questions.');
     }
 }
 
 function generateQuestions(numQuestions) {
-    const topic = document.getElementById('topic-title').innerText.trim(); // Ensure no leading/trailing whitespace
-    const chatContent = document.getElementById('chat-content').innerText.trim(); // Get conversation text from chat content
+    const currentSubject = localStorage.getItem('currentSubject');
+    const currentTopic = localStorage.getItem('currentTopic');
+    const chatContent = localStorage.getItem('lastChatContent');
 
-    if (!chatContent) {
-        alert('The conversation is empty. Start a conversation before generating questions.');
-        document.getElementById('loading-dialog').style.display = 'none'; // Hide loading dialog
+    if (!currentTopic || !currentSubject) {
+        alert('Error: No se pudo determinar el tema o la asignatura.');
+        const loadingDialog = document.getElementById('loading-dialog');
+        if (loadingDialog) {
+            loadingDialog.style.display = 'none';
+        }
         return;
     }
 
-    fetch(`/generate_questions/`, { // Use the generate endpoint for POST
+    fetch(`/generate_questions/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
         },
+        credentials: 'same-origin',
         body: JSON.stringify({
-            topic,
-            numQuestions,
-            conversation: chatContent // Include conversation in the request payload
+            topic: currentTopic,
+            subject: currentSubject,
+            numQuestions: numQuestions,
+            conversation: chatContent
         })
     })
     .then(response => {
@@ -394,53 +409,52 @@ function generateQuestions(numQuestions) {
     })
     .then(data => {
         if (data.redirect_url) {
-            // Redirect to the questions page
             window.location.href = data.redirect_url;
         } else if (data.error) {
-            alert(`Error: ${data.error}`);
+            throw new Error(data.error);
         } else {
-            alert('Unexpected response from the server.');
+            throw new Error('Unexpected response from the server.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while generating questions. Please try again later.');
+        alert('Ocurrió un error al generar preguntas. Por favor, inténtelo nuevamente más tarde.');
     })
     .finally(() => {
-        // Hide the loading dialog regardless of success or failure
-        document.getElementById('loading-dialog').style.display = 'none';
+        const loadingDialog = document.getElementById('loading-dialog');
+        if (loadingDialog) {
+            loadingDialog.style.display = 'none';
+        }
     });
 }
 
-// Update the window.onload function
 window.onload = function() {
-    // Initialize UI state
     const chatContent = document.getElementById('chat-content');
     const topicTitle = document.getElementById('topic-title');
     
-    // Restore chat state if available
-    if (window.initialChatState) {
-        if (window.initialChatState.content) {
-            chatContent.innerHTML = window.initialChatState.content;
-            hasGPTResponded = true;
+    const savedSubject = localStorage.getItem('currentSubject');
+    const savedTopic = localStorage.getItem('currentTopic');
+    const savedContent = localStorage.getItem('lastChatContent');
+    
+    if (savedSubject && savedTopic) {
+        selectedSubject = savedSubject;
+        topicTitle.innerText = savedTopic;
+        if (savedContent) {
+            chatContent.innerHTML = savedContent;
+            hasGPTResponded = chatContent.querySelector('.bot-message') !== null;
         }
+        isTopicSelected = true;
         
-        if (window.initialChatState.topic) {
-            topicTitle.innerText = window.initialChatState.topic;
-            selectedSubject = window.initialChatState.subject;
-            isTopicSelected = true;
-            
-            // Enable buttons if we have a topic
-            document.getElementById('user-input').disabled = false;
-            document.getElementById('send-button').disabled = false;
-            document.getElementById('clear-button').disabled = false;
-            document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
-        } else {
-            // Default state - everything disabled
-            document.getElementById('user-input').disabled = true;
-            document.getElementById('send-button').disabled = true;
-            document.getElementById('clear-button').disabled = true;
-            document.getElementById('ask-questions-btn').disabled = true;
-        }
+        document.getElementById('user-input').disabled = false;
+        document.getElementById('send-button').disabled = false;
+        document.getElementById('clear-button').disabled = false;
+        document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
+    } else {
+        document.getElementById('user-input').disabled = true;
+        document.getElementById('send-button').disabled = true;
+        document.getElementById('clear-button').disabled = true;
+        document.getElementById('ask-questions-btn').disabled = true;
     }
 };
+
+

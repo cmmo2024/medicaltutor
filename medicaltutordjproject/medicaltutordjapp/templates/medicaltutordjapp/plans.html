@@ -33,7 +33,8 @@
                             data-plan-id="{{ plan.plan_id }}"
                             data-plan-price="{{ plan.price }}"
                             data-receiver-id="{{ plan.receiver_id_card }}"
-                            data-phone="{{ plan.phone_number }}">
+                            data-phone="{{ plan.phone_number }}"
+                            data-qr-code="{{ plan.qr_code.url }}">
                         Suscribirse
                     </button>
                 </div>
@@ -61,16 +62,16 @@
 
                     <!-- QR Code Payment Method -->
                     <div id="qr-method" class="payment-method active">
-                        <img src="{% static 'images/payment-qr.jpg' %}" alt="QR Code" class="qr-code">
+                        <img id="qr-code-image" alt="QR Code" class="qr-code">
                         <p>Escanee el código QR para realizar el pago</p>
                     </div>
 
                     <!-- ID Card Payment Method -->
                     <div id="id-method" class="payment-method">
                         <div class="id-card-info">
-                            <p>Cuenta: {{ plan.receiver_id_card }}</p>
+                            <p>Cuenta:</p>
                             <h3 id="receiver-id-display"></h3>
-                            <p>Móvil a confirmar: {{ plan.phone_number }}</p>
+                            <p>Móvil a confirmar:</p>
                             <h3 id="phone-number-display"></h3>
                         </div>
                     </div>
@@ -91,3 +92,4 @@
     <script src="{% static 'js/plans.js' %}"></script>
 </body>
 </html>
+

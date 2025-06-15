@@ -21,6 +21,55 @@ function getCSRFToken() {
     return cookieValue;
 }
 
+// Enhanced cleanup function for temp files
+function cleanup_temp_files() {
+    return fetch('/cleanup_temp_files/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Cleanup successful:', data);
+        return data;
+    })
+    .catch(error => {
+        console.error('Error cleaning up temp files:', error);
+        // Don't throw error to allow navigation to continue
+        return { status: 'error', error: error.message };
+    });
+}
+
+// Function to close modal dialogs
+function closeModalDialog() {
+    // Close question dialog
+    const questionDialog = document.getElementById('question-dialog');
+    if (questionDialog) {
+        questionDialog.style.display = 'none';
+    }
+    
+    // Close chat confirmation dialog
+    const chatDialog = document.getElementById('chat-confirmation-dialog');
+    if (chatDialog) {
+        chatDialog.style.display = 'none';
+    }
+    
+    // Hide overlay
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
 // Accordion functionality
 document.addEventListener("DOMContentLoaded", function () {
     var acc = document.getElementsByClassName("accordion");
@@ -32,6 +81,57 @@ document.addEventListener("DOMContentLoaded", function () {
                 panel.style.display = "none";
             } else {
                 panel.style.display = "block";
+            }
+
+            // Update subject name in modal when accordion is clicked
+            selectedSubject = this.getAttribute('data-subject');
+            const subjectNameSpan = document.getElementById('subject-name');
+            if (subjectNameSpan) {
+                subjectNameSpan.textContent = selectedSubject;
+            }
+
+            // Enable Ejercitar button if user has paid plan
+            const exerciseButton = document.getElementById('ask-questions-btn');
+            const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+            if (exerciseButton && generalTestRadio) {
+                exerciseButton.disabled = false;
+            }
+        });
+    }
+
+    // Handle "Regresar al chat" button click
+    const confirmGoHomeButton = document.getElementById('confirm-go-home-button');
+    if (confirmGoHomeButton) {
+        confirmGoHomeButton.addEventListener('click', async function(event) {
+            event.preventDefault();
+            
+            // Disable button to prevent multiple clicks
+            confirmGoHomeButton.disabled = true;
+            confirmGoHomeButton.textContent = 'Procesando...';
+            
+            try {
+                // Step 1: Clean up temporary files
+                console.log('Cleaning up temporary files...');
+                await cleanup_temp_files();
+                
+                // Step 2: Close modal dialog
+                console.log('Closing modal dialog...');
+                closeModalDialog();
+                
+                // Step 3: Navigate back to chat interface
+                console.log('Navigating to chat...');
+                window.location.href = '/chat/';
+                
+            } catch (error) {
+                console.error('Error during cleanup process:', error);
+                
+                // Re-enable button and restore text
+                confirmGoHomeButton.disabled = false;
+                confirmGoHomeButton.textContent = 'Regresar al chat';
+                
+                // Still navigate to chat even if cleanup fails
+                alert('Hubo un problema al limpiar archivos temporales, pero continuaremos al chat.');
+                window.location.href = '/chat/';
             }
         });
     }
@@ -57,6 +157,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 localStorage.setItem('lastChatContent', data.chat_content);
             }
             
+            // Update modal dialog immediately
+            const subjectNameSpan = document.getElementById('subject-name');
+            const topicNameSpan = document.getElementById('topic-name');
+            if (subjectNameSpan) subjectNameSpan.textContent = data.subject;
+            if (topicNameSpan) topicNameSpan.textContent = data.topic;
+            
             // Find and activate the correct accordion
             const accordions = document.querySelectorAll('.accordion');
             accordions.forEach(accordion => {
@@ -71,6 +177,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Load the topic if it exists
             loadTopic(data.topic, data.chat_content);
+
+            // Enable Ejercitar button if user has paid plan
+            const exerciseButton = document.getElementById('ask-questions-btn');
+            const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+            if (exerciseButton && generalTestRadio) {
+                exerciseButton.disabled = false;
+            }
         }
     })
     .catch(error => {
@@ -90,6 +203,19 @@ function selectSubject(element) {
     selectedSubject = element.getAttribute('data-subject');
     localStorage.setItem('currentSubject', selectedSubject);
     
+    // Update subject name in modal immediately
+    const subjectNameSpan = document.getElementById('subject-name');
+    if (subjectNameSpan) {
+        subjectNameSpan.textContent = selectedSubject;
+    }
+
+    // Enable Ejercitar button if user has paid plan
+    const exerciseButton = document.getElementById('ask-questions-btn');
+    const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+    if (exerciseButton && generalTestRadio) {
+        exerciseButton.disabled = false;
+    }
+    
     // Update session data
     updateSessionData(selectedSubject, null);
 }
@@ -105,11 +231,21 @@ function loadTopic(topic, savedContent = null) {
             if (accordion) {
                 selectedSubject = accordion.getAttribute('data-subject');
                 localStorage.setItem('currentSubject', selectedSubject);
+                // Update subject name in modal immediately
+                const subjectNameSpan = document.getElementById('subject-name');
+                if (subjectNameSpan) {
+                    subjectNameSpan.textContent = selectedSubject;
+                }
             }
         }
     }
     
     document.getElementById('topic-title').innerText = topic;
+    // Update topic name in modal immediately
+    const topicNameSpan = document.getElementById('topic-name');
+    if (topicNameSpan) {
+        topicNameSpan.textContent = topic;
+    }
     localStorage.setItem('currentTopic', topic);
 
     if (savedContent) {
@@ -138,7 +274,17 @@ function loadTopic(topic, savedContent = null) {
     document.getElementById('user-input').disabled = false;
     document.getElementById('send-button').disabled = false;
     document.getElementById('clear-button').disabled = false;
-    document.getElementById('ask-questions-btn').disabled = false;
+
+    // Enable Ejercitar button based on user's plan
+    const exerciseButton = document.getElementById('ask-questions-btn');
+    const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+    if (generalTestRadio) {
+        // User has paid plan - enable button immediately
+        exerciseButton.disabled = false;
+    } else {
+        // Free user - enable button when topic is selected
+        exerciseButton.disabled = false;
+    }
 
     isTopicSelected = true;
     
@@ -256,7 +402,12 @@ function sendMessage() {
                 updateSessionData(selectedSubject, topic, chatContent.innerHTML);
                 localStorage.setItem('lastChatContent', chatContent.innerHTML);
                 
-                document.getElementById('ask-questions-btn').disabled = false;
+                // For free users, enable the button after GPT responds
+                const exerciseButton = document.getElementById('ask-questions-btn');
+                const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+                if (!generalTestRadio) {
+                    exerciseButton.disabled = false;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -279,6 +430,12 @@ function clearChat() {
     const currentTopic = document.getElementById('topic-title').innerText;
     document.getElementById('topic-title').innerText = "Seleccione un tema para repasar";
     document.getElementById('chat-content').innerHTML = "";
+    
+    // Reset modal dialog text immediately
+    const subjectNameSpan = document.getElementById('subject-name');
+    const topicNameSpan = document.getElementById('topic-name');
+    if (subjectNameSpan) subjectNameSpan.textContent = "la asignatura";
+    if (topicNameSpan) topicNameSpan.textContent = "tema no seleccionado";
     
     // Update session to clear the chat
     updateSessionData(null, null, null);
@@ -373,24 +530,37 @@ function closeQuestionDialog() {
 
 function continueToNextPage() {
     const selectedOption = document.querySelector('input[name="question-count"]:checked');
+    const selectedQuestionType = document.querySelector('input[name="question-type"]:checked');
 
-    if (selectedOption) {
+    if (selectedOption && selectedQuestionType) {
         const numQuestions = parseInt(selectedOption.value, 10);
+        const questionType = selectedQuestionType.value;
+        
         closeQuestionDialog();
         document.getElementById('loading-dialog').style.display = 'block';
-        generateQuestions(numQuestions);
+        generateQuestions(numQuestions, questionType);
     } else {
-        alert('Please select the number of questions.');
+        alert('Por favor selecciona el número de preguntas y el tipo de test.');
     }
 }
 
-function generateQuestions(numQuestions) {
+function generateQuestions(numQuestions, questionType = 'topic') {
     const currentSubject = localStorage.getItem('currentSubject');
     const currentTopic = localStorage.getItem('currentTopic');
     const chatContent = localStorage.getItem('lastChatContent');
 
-    if (!currentTopic || !currentSubject) {
-        alert('Error: No se pudo determinar el tema o la asignatura.');
+    if (!currentSubject) {
+        alert('Error: No se pudo determinar la asignatura.');
+        const loadingDialog = document.getElementById('loading-dialog');
+        if (loadingDialog) {
+            loadingDialog.style.display = 'none';
+        }
+        return;
+    }
+
+    // For topic-specific tests, we need a topic
+    if (questionType === 'topic' && !currentTopic) {
+        alert('Error: No se pudo determinar el tema para el test específico.');
         const loadingDialog = document.getElementById('loading-dialog');
         if (loadingDialog) {
             loadingDialog.style.display = 'none';
@@ -407,10 +577,11 @@ function generateQuestions(numQuestions) {
         },
         credentials: 'same-origin',
         body: JSON.stringify({
-            topic: currentTopic,
+            topic: questionType === 'topic' ? currentTopic : '',
             subject: currentSubject,
             numQuestions: numQuestions,
-            conversation: chatContent
+            conversation: chatContent,
+            question_type: questionType
         })
     })
     .then(response => {
@@ -451,6 +622,13 @@ window.onload = function() {
     if (savedSubject && savedTopic) {
         selectedSubject = savedSubject;
         topicTitle.innerText = savedTopic;
+        
+        // Update modal dialog immediately
+        const subjectNameSpan = document.getElementById('subject-name');
+        const topicNameSpan = document.getElementById('topic-name');
+        if (subjectNameSpan) subjectNameSpan.textContent = savedSubject;
+        if (topicNameSpan) topicNameSpan.textContent = savedTopic;
+        
         if (savedContent) {
             chatContent.innerHTML = savedContent;
             hasGPTResponded = chatContent.querySelector('.bot-message') !== null;
@@ -460,7 +638,17 @@ window.onload = function() {
         document.getElementById('user-input').disabled = false;
         document.getElementById('send-button').disabled = false;
         document.getElementById('clear-button').disabled = false;
-        document.getElementById('ask-questions-btn').disabled = !hasGPTResponded;
+
+        // Enable Ejercitar button based on user's plan
+        const exerciseButton = document.getElementById('ask-questions-btn');
+        const generalTestRadio = document.querySelector('input[name="question-type"][value="general"]:not([disabled])');
+        if (generalTestRadio) {
+            // User has paid plan - enable button immediately
+            exerciseButton.disabled = false;
+        } else {
+            // Free user - enable button only when topic is selected
+            exerciseButton.disabled = false;
+        }
     } else {
         document.getElementById('user-input').disabled = true;
         document.getElementById('send-button').disabled = true;

@@ -19,6 +19,7 @@ urlpatterns = [
     path('get_session_data/', views.get_session_data, name='get_session_data'),
     path('update_session/', views.update_session, name='update_session'),
     path('restore_quiz_count/', views.restore_quiz_count, name='restore_quiz_count'),
+    path('cleanup_temp_files/', views.cleanup_temp_files, name='cleanup_temp_files'),
     path('password_reset/', views.password_reset_request, name='password_reset'),
     path('password_reset/done/', views.password_reset_done, name='password_reset_done'),
     path('reset/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),

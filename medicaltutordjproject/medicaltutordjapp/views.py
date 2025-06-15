@@ -2,38 +2,41 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.core.mail import send_mail, BadHeaderError
 from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django.utils import timezone
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.conf import settings
 from django.template import Template, Context
+from django.core.cache import cache 
 
 from urllib.parse import unquote
- 
-from datetime import datetime
-
-from openai import OpenAI
-
-from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
-from medicaltutordjapp.models import Plan, Quizzes, UserStats, Payment, Voucher
-
-from math import floor
+from datetime import datetime, timedelta
 
 import json
 import urllib
 import os
 import uuid
+import logging
+
+from openai import OpenAI
+from medicaltutordjapp.utils.Gift_to_html import gisfttohtml
+from medicaltutordjapp.models import Plan, Quizzes, UserStats, Payment, Voucher, ProcessedSubmission
+from math import floor
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=os.environ.get("API_KEY"), base_url="https://openrouter.ai/api/v1")
 
@@ -288,7 +291,7 @@ def ask_gpt(request):
     try:
         conversation = []
         
-        system_message = "You are a knowledgeable professor. Respond with detailed, informative, and professional answers. Always repond in the user language."
+        system_message = "You are a knowledgeable professor. Respond with detailed, informative, and professional answers. Always repond in the user's language."
         if subject:
             system_message += f" Specializing in {subject}. Answer questions only about this {subject}. For all other questions that are out of the scope of these subject, please respond politely that the question is out of your scope. In this case, do not answer it."
         
@@ -351,9 +354,14 @@ def generate_questions(request):
             data = json.loads(request.body)
             topic = data.get('topic', '')
             subject = data.get('subject', '')
+            question_type = data.get('question_type', 'topic')  # 'topic' or 'general'
             
-            if not topic or not subject:
-                return JsonResponse({'error': 'Topic and subject are required'}, status=400)
+            if not subject:
+                return JsonResponse({'error': 'Subject is required'}, status=400)
+            
+            # For general tests, topic is not required
+            if question_type == 'topic' and not topic:
+                return JsonResponse({'error': 'Topic is required for topic-specific tests'}, status=400)
             
             json_path = get_app_file_path('utils', 'Summaries.json')
             
@@ -368,17 +376,36 @@ def generate_questions(request):
             with open(json_path, 'r', encoding='utf-8') as file:
                 summaries = json.load(file)
             
-            if subject not in summaries or topic not in summaries[subject]:
-                summary = ", nevermind there's no summary about this topic"
+            # Prepare content based on question type
+            if question_type == 'general':
+                # For general tests, use all topics from the subject
+                if subject not in summaries:
+                    return JsonResponse({'error': f'Subject {subject} not found in summaries'}, status=400)
+                
+                # Get all topics and their content for the subject
+                all_topics = summaries[subject]
+                summary_content = []
+                for topic_name, topic_content in all_topics.items():
+                    summary_content.append(f"{topic_name}: {', '.join(topic_content) if isinstance(topic_content, list) else topic_content}")
+                
+                summary = "; ".join(summary_content)
+                content_description = f"general knowledge of {subject}"
             else:
-                summary = str(summaries[subject][topic])
+                # For topic-specific tests
+                if subject not in summaries or topic not in summaries[subject]:
+                    summary = ", nevermind there's no summary about this topic"
+                else:
+                    summary = str(summaries[subject][topic])
+                content_description = f"{topic} from {subject}"
             
             conversation = data.get('conversation', '')
             num_questions = data.get('numQuestions', 3)
 
-            # Updated GIFT instructions without Short Answer
+            # Enhanced GIFT instructions for comprehensive mixed-format tests
             instructions = """
-            General instructions for GIFT format:
+            General instructions for creating comprehensive mixed-format GIFT questions:
+
+            QUESTION TYPES TO USE:
 
             1. Multiple Choice (Single Answer):
             Who's buried in Grant's tomb?{=Grant ~no one ~Napoleon ~Churchill}
@@ -411,11 +438,11 @@ def generate_questions(request):
             Precise value: What is pi (3 decimals)?{#3.141..3.142}
             Multiple ranges: When was Grant born?{#=1822:0 =%50%1822:2}
 
-            Important formatting rules:
-            - Questions must be numbered as "1. question text", "2. question text", "3. question text" and so on
+            FORMATTING REQUIREMENTS:
+            - Questions must be numbered as "1. question text", "2. question text", etc.
             - Questions must be separated by blank lines
             - Use = for correct answers and ~ for incorrect ones
-            - For multiple choice, one = and several ~ answers and don't show the part like "~%-100%" on the interface
+            - For multiple choice, one = and several ~ answers
             - For numerical, use # and specify ranges with : or ..
             - For matching, minimum three pairs with ->
             - Avoid HTML tags in questions/answers
@@ -424,13 +451,31 @@ def generate_questions(request):
             - Use UTF-8 encoding to support special characters
             - Ensure no introductory text, comments, or extra formatting in the output
             - DO NOT generate Short Answer questions
+
+            CONTENT DISTRIBUTION REQUIREMENTS:
+            - Distribute questions evenly across different topics/concepts
+            - Include questions at different cognitive levels (recall, understanding, application)
+            - Balance question types appropriately
+            - Ensure comprehensive coverage of the subject material
+            - Make questions challenging but fair
+            - Include both basic and advanced concepts
             """
 
-            # Generate questions using GPT
-            prompt = (
-                f"Generate exactly {num_questions} GIFT-format questions in the user language about the topic: {topic} from {subject} and this context: {conversation}. "
-                f"Prioritize this summary: {summary}. Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
-            )
+            # Generate questions using GPT with enhanced prompt for general tests
+            if question_type == 'general':
+                prompt = (
+                    f"Generate exactly {num_questions} comprehensive GIFT-format questions in the user's language for a general assessment of {subject}. "
+                    f"Create a balanced mix of question types covering key concepts from across the entire subject. "
+                    f"Use this comprehensive subject content: {summary}. "
+                    f"Additional context: {conversation}. "
+                    f"Ensure questions assess different cognitive levels and cover various topics within the subject. "
+                    f"Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
+                )
+            else:
+                prompt = (
+                    f"Generate exactly {num_questions} GIFT-format questions in the user's language about the topic: {topic} from {subject} and this context: {conversation}. "
+                    f"Prioritize this summary: {summary}. Questions must strictly follow these GIFT formatting instructions:\n\n{instructions}"
+                )
             
             response = client.chat.completions.create(
                 model="qwen/qwq-32b:free",
@@ -457,6 +502,7 @@ def generate_questions(request):
             # Store the paths in the session for later use
             request.session['temp_gift_path'] = temp_gift_path
             request.session['temp_html_path'] = temp_html_path
+            request.session['current_question_type'] = question_type
 
             # Only decrement the quiz count after successful generation and before redirecting
             if request.user.is_authenticated:
@@ -552,158 +598,173 @@ def update_session(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
-
+    
 @csrf_exempt
-def qualify_answers(request):
-    if request.method == 'POST':
-        try:
-            # Get the answers from the request
-            data = json.loads(request.body)
-            
-            # Get the GIFT file path from the session
-            temp_gift_path = request.session.get('temp_gift_path')
-            if not temp_gift_path or not os.path.exists(temp_gift_path):
-                return JsonResponse({'error': 'Questions file not found'}, status=500)
-            
-            try:
-                # Parse and qualify
-                gift_parser = gisfttohtml(temp_gift_path)
-                questions = {str(i+1): q.text for i, q in enumerate(gift_parser.questions())}
-                results = gift_parser.qualify_answers(data)
-                
-                # Add user answers to results
-                for q_id, result in results.items():
-                    user_answer = data.get(f"q{q_id}")
-                    if isinstance(user_answer, list):
-                        result['user_answer'] = ', '.join(user_answer)
-                    else:
-                        result['user_answer'] = user_answer if user_answer else "Sin respuesta"
-                
-                # Calculate score using the original method
-                correct_answers = sum(1 for result in results.values() if result['result'])
-                total_questions = len(results)
-                score = max(2,floor(5 * (correct_answers / total_questions)))
-                
-                # Save quiz results if user is authenticated
-                if request.user.is_authenticated:
-                    user_session_key = f'user_{request.user.id}_chat'
-                    user_session = request.session.get(user_session_key, {})
-                    current_subject = user_session.get('current_subject', '')
-                    current_topic = user_session.get('current_topic', '')
-                    
-                    if current_subject and current_topic:
-                        quiz = Quizzes.objects.create(
-                            user=request.user,
-                            topic=current_topic,
-                            matter=current_subject,
-                            questions_count=total_questions,
-                            score=score,
-                            created_at=datetime.now()
-                        )
-                        
-                        # Update user stats
-                        stats = request.user.profile.stats
-                        if stats:
-                            # Update total quizzes
-                            stats.total_quizzes = (stats.total_quizzes or 0) + 1
-                            stats.last_activity = datetime.now()
-                            
-                            # Update average score
-                            if stats.average_score is None:
-                                stats.average_score = score
-                            else:
-                                stats.average_score = (stats.average_score * (stats.total_quizzes - 1) + score) / stats.total_quizzes
-                            
-                            # Update subject averages
-                            subject_averages = stats.subject_averages or {}
-                            if current_subject in subject_averages:
-                                old_avg = subject_averages[current_subject]
-                                subject_count = sum(1 for q in Quizzes.objects.filter(user=request.user) if q.matter == current_subject)
-                                new_avg = (old_avg * (subject_count - 1) + score) / subject_count
-                                subject_averages[current_subject] = new_avg
-                            else:
-                                subject_averages[current_subject] = score
-                            
-                            stats.subject_averages = subject_averages
-                            stats.save()
-                
-                # Keep the files until after the results are displayed
-                return JsonResponse({
-                    'result': results,
-                    'total_score': score,
-                    'questions': questions
-                })
-                
-            except Exception as e:
-                if os.path.exists(temp_gift_path):
-                    os.remove(temp_gift_path)
-                html_path = request.session.get('temp_html_path')
-                if html_path and os.path.exists(html_path):
-                    os.remove(html_path)
-                raise e
-                    
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-            
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 @login_required
-@require_http_methods(["POST"])
-def restore_quiz_count(request):
-    """Restore quiz count when user cancels a quiz"""
+def qualify_answers(request):
     try:
-        if request.user.is_authenticated:
-            user_profile = request.user.profile
-            if user_profile.plan:
-                user_profile.remaining_quizzes += 1
-                user_profile.save()
-                return JsonResponse({'success': True, 'message': 'Quiz count restored'})
-        return JsonResponse({'success': False, 'message': 'No plan found'})
+        data = json.loads(request.body)
+        submission_id = data.get('submission_id')
+        
+        gift_path = request.session.get('temp_gift_path')
+        
+        if not gift_path or not os.path.exists(gift_path):
+            raise FileNotFoundError("Questions file not found")
+
+        gift_parser = gisfttohtml(gift_path)
+        questions = {i+1: q.text for i, q in enumerate(gift_parser.questions())}
+        results = gift_parser.qualify_answers(data)
+        correct_answers = sum(1 for result in results.values() if result['result'])
+        total_questions = len(results)
+        total_score = max(2, floor((correct_answers / total_questions) * 5))
+
+        json_path = get_app_file_path('utils', 'Summaries.json')
+        with open(json_path, 'r', encoding='utf-8') as file:
+            subject_topics = json.load(file)
+
+        current_topic = request.session.get('current_topic', 'Unknown')
+        current_subject = get_correct_subject(current_topic, subject_topics)
+        if not current_subject:
+            current_subject = request.session.get('current_subject', 'Unknown')
+
+        return JsonResponse({
+            'result': results,
+            'questions': questions,
+            'total_score': total_score
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+@login_required
+@require_http_methods(["POST"])
 def qualified_answers(request):
-    score = request.GET.get('score', 0)
-    results_encoded = request.GET.get('results', '')
-    questions_encoded = request.GET.get('questions', '')
-    
-    # Get the current subject and topic from the session
-    user_session_key = f'user_{request.user.id}_chat'
-    user_session = request.session.get(user_session_key, {})
-    
-    current_subject = user_session.get('current_subject', '')
-    current_topic = user_session.get('current_topic', '')
-    chat_content = user_session.get('chat_content', '')
-
     try:
-        # Decode URL-encoded JSON
-        results = json.loads(unquote(results_encoded))
-        questions = json.loads(unquote(questions_encoded))
-    except (ValueError, json.JSONDecodeError):
-        results = {}
-        questions = {}
+        submission_id = request.POST.get('submission_id')
+        if not submission_id:
+            return HttpResponseBadRequest("Missing submission ID")
 
-    # Clean up temporary files after results are displayed
-    temp_gift_path = request.session.get('temp_gift_path')
-    if temp_gift_path and os.path.exists(temp_gift_path):
-        os.remove(temp_gift_path)
-    
-    temp_html_path = request.session.get('temp_html_path')
-    if temp_html_path and os.path.exists(temp_html_path):
-        os.remove(temp_html_path)
-    
-    # Clear the file paths from session
-    request.session.pop('temp_gift_path', None)
-    request.session.pop('temp_html_path', None)
+        with transaction.atomic():
+            try:
+                submission = ProcessedSubmission.objects.create(
+                    submission_id=submission_id,
+                    user=request.user,
+                    processed=True
+                )
+            except IntegrityError:
+                logger.warning(f"Duplicate submission blocked: {submission_id}")
+                return proceed_with_existing_submission(request)
 
-    return render(request, "medicaltutordjapp/qualified_answers.html", {
-        'score': score,
+            # Safe to proceed
+            score = request.POST.get('score', '0')
+            try:
+                results = json.loads(request.POST.get('results', '{}'))
+                questions = json.loads(request.POST.get('questions', '{}'))
+            except json.JSONDecodeError:
+                results, questions = {}, {}
+
+            user_session = request.session.get(f'user_{request.user.id}_chat', {})
+            current_subject = user_session.get('current_subject', '')
+            current_topic = user_session.get('current_topic', '')
+            
+            # Check if this is a general test
+            question_type = request.session.get('current_question_type', 'topic')
+            if question_type == 'general':
+                current_topic = ''  # Empty topic indicates general test
+
+            quiz = Quizzes.objects.create(
+                user=request.user,
+                topic=current_topic,
+                matter=current_subject,
+                questions_count=len(results),
+                score=score,
+                created_at=timezone.now(),
+                submission=submission
+            )
+
+            update_user_stats(request.user, score)
+            logger.info(f"Processed new quiz for {submission_id}")
+            return render_quiz_results(request, quiz, results, questions)
+
+    except Exception as e:
+        logger.error(f"Failed processing submission: {e}", exc_info=True)
+        return HttpResponseBadRequest("An error occurred processing your submission")
+
+def proceed_with_existing_submission(request):
+    """Handle case where submission already exists"""
+    submission_id = request.POST.get('submission_id')
+    try:
+        # Try to find existing quiz data
+        existing_sub = ProcessedSubmission.objects.filter(
+            submission_id=submission_id,
+            user=request.user,
+        ).first()
+        
+        if existing_sub:
+            quiz = Quizzes.objects.filter(
+                user=request.user,
+                created_at__gte=existing_sub.created_at - timedelta(seconds=1),
+                created_at__lte=existing_sub.created_at + timedelta(seconds=1)
+            ).first()
+            
+            if quiz:
+                try:
+                    results = json.loads(request.POST.get('results', '{}'))
+                    questions = json.loads(request.POST.get('questions', '{}'))
+                except json.JSONDecodeError:
+                    results = {}
+                    questions = {}
+                
+                return render_quiz_results(request, quiz, results, questions)
+    
+    except Exception as e:
+        logger.error(f"Error finding existing submission: {str(e)}")
+    
+    # Fallback to rendering with just POST data
+    return render_quiz_results(request, None, 
+                             json.loads(request.POST.get('results', '{}')),
+                             json.loads(request.POST.get('questions', '{}')))
+
+def update_user_stats(user, score):
+    """Update user statistics atomically"""
+    stats, created = UserStats.objects.get_or_create(user=user)
+    stats.total_quizzes = (stats.total_quizzes or 0) + 1
+    stats.last_activity = timezone.now()
+    
+    if stats.average_score is None:
+        stats.average_score = float(score)
+    else:
+        stats.average_score = (stats.average_score * (stats.total_quizzes - 1) + float(score)) / stats.total_quizzes
+    
+    stats.save()
+    stats.update_subject_averages()
+
+def render_quiz_results(request, quiz, results, questions):
+    """Render the quiz results page"""
+    user_session = request.session.get(f'user_{request.user.id}_chat', {})
+    
+    # Determine if this is a general test
+    is_general_test = False
+    if quiz:
+        is_general_test = not quiz.topic  # Empty topic indicates general test
+    else:
+        question_type = request.session.get('current_question_type', 'topic')
+        is_general_test = question_type == 'general'
+    
+    context = {
+        'score': quiz.score if quiz else request.POST.get('score', '0'),
         'results': results,
         'questions': questions,
-        'subject': current_subject,
-        'topic': current_topic,
-        'chat_content': chat_content
-    })
+        'subject': quiz.matter if quiz else user_session.get('current_subject', ''),
+        'topic': quiz.topic if quiz else user_session.get('current_topic', ''),
+        'chat_content': user_session.get('chat_content', ''),
+        'is_general_test': is_general_test,
+        'is_duplicate': quiz is None
+    }
+    
+    return render(request, "medicaltutordjapp/qualified_answers.html", context)
 
 @login_required
 def statistics(request):
@@ -735,5 +796,105 @@ def statistics(request):
         'subject_averages': subject_averages
     })
 
+@csrf_exempt
+@login_required
+def cleanup_temp_files(request):
+    """Enhanced cleanup function with comprehensive error handling and logging"""
+    if request.method == 'POST':
+        cleanup_success = False
+        error_details = None
+        files_cleaned = []
+        
+        try:
+            logger.info(f"Starting cleanup operation for user {request.user.id}")
+            
+            # Get file paths from session
+            temp_gift_path = request.session.get('temp_gift_path')
+            temp_html_path = request.session.get('temp_html_path')
+            
+            # Clean up GIFT file
+            if temp_gift_path and os.path.exists(temp_gift_path):
+                try:
+                    os.remove(temp_gift_path)
+                    files_cleaned.append('GIFT file')
+                    logger.info(f"Successfully removed GIFT file: {temp_gift_path}")
+                except OSError as e:
+                    logger.error(f"Failed to remove GIFT file {temp_gift_path}: {str(e)}")
+                    raise e
+            
+            # Clean up HTML file
+            if temp_html_path and os.path.exists(temp_html_path):
+                try:
+                    os.remove(temp_html_path)
+                    files_cleaned.append('HTML file')
+                    logger.info(f"Successfully removed HTML file: {temp_html_path}")
+                except OSError as e:
+                    logger.error(f"Failed to remove HTML file {temp_html_path}: {str(e)}")
+                    raise e
+            
+            # Clear session data
+            session_keys_cleared = []
+            for key in ['temp_gift_path', 'temp_html_path', 'current_question_type']:
+                if key in request.session:
+                    request.session.pop(key, None)
+                    session_keys_cleared.append(key)
+            
+            if session_keys_cleared:
+                logger.info(f"Cleared session keys: {', '.join(session_keys_cleared)}")
+            
+            cleanup_success = True
+            logger.info(f"Cleanup operation completed successfully for user {request.user.id}")
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Archivos temporales eliminados correctamente',
+                'files_cleaned': files_cleaned,
+                'session_keys_cleared': session_keys_cleared
+            })
+            
+        except Exception as e:
+            error_details = str(e)
+            logger.error(f"Cleanup operation failed for user {request.user.id}: {error_details}", exc_info=True)
+            
+            # Schedule background cleanup task (simplified version)
+            try:
+                # Store failed cleanup info in cache for later retry
+                cache_key = f"failed_cleanup_{request.user.id}_{uuid.uuid4().hex[:8]}"
+                cache.set(cache_key, {
+                    'user_id': request.user.id,
+                    'temp_gift_path': temp_gift_path,
+                    'temp_html_path': temp_html_path,
+                    'timestamp': timezone.now().isoformat(),
+                    'error': error_details
+                }, timeout=3600)  # Store for 1 hour
+                
+                logger.info(f"Scheduled background cleanup task with key: {cache_key}")
+                
+            except Exception as cache_error:
+                logger.error(f"Failed to schedule background cleanup: {str(cache_error)}")
+            
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No se pudieron eliminar los archivos temporales',
+                'error': error_details,
+                'files_cleaned': files_cleaned,
+                'background_cleanup_scheduled': True
+            }, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-
+@login_required
+@require_http_methods(["POST"])
+def restore_quiz_count(request):
+    """Restore quiz count when user cancels a quiz"""
+    
+    try:
+        if request.user.is_authenticated:
+            user_profile = request.user.profile
+            if user_profile.plan:
+                user_profile.remaining_quizzes += 1
+                user_profile.save()
+                return JsonResponse({'success': True, 'message': 'Quiz count restored'})
+        return JsonResponse({'success': False, 'message': 'No plan found'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

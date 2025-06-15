@@ -133,14 +133,14 @@
                 <div class="question-type-selection" style="margin-bottom: 20px;">
                     <label>
                         <input type="radio" name="question-type" value="general" {% if user.profile.has_paid_plan %}checked{% endif %} {% if not user.profile.has_paid_plan %}disabled{% endif %}>
-                        Test general de <span id="subject-name">la asignatura</span>
+                        Test general de <span id="subject-name">{{ user.profile.last_subject|default:"la asignatura" }}</span>
                         {% if not user.profile.has_paid_plan %}
                             <span style="color: #999; font-size: 0.9em;">🔒 Solo plan de pago</span>
                         {% endif %}
                     </label><br>
                     <label>
                         <input type="radio" name="question-type" value="topic" {% if not user.profile.has_paid_plan %}checked{% endif %} id="topic-radio">
-                        Test específico de <span id="topic-name">tema no seleccionado</span>
+                        Test específico de <span id="topic-name">{{ user.profile.last_topic|default:"tema no seleccionado" }}</span>
                     </label>
                 </div>
                 

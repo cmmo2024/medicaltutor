@@ -51,7 +51,7 @@
                             {% for subject in subject_averages %}
                             <tr>
                                 <td>{{ subject.matter }}</td>
-                                <td>{{ subject.avg_score|floatformat:0 }}</td>
+                                <td>{{ subject.avg_score|stringformat:".0f" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -83,9 +83,9 @@
                                     {{ quiz.created_at|date:"d/m/Y h:i A" }}
                                 </td>
                                 <td>{{ quiz.matter }}</td>
-                                <td>{{ quiz.topic }}</td>
+                                <td>{% if quiz.topic %}{{ quiz.topic }}{% else %}Test general de {{ quiz.matter }}{% endif %}</td>
                                 <td>{{ quiz.questions_count }}</td>
-                                <td>{{ quiz.score|floatformat:0 }}</td>
+                                <td>{{ quiz.score|stringformat:".0f" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

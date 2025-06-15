@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <title>Cuestionario</title>
+                            {% load static %}
+                            <link rel="stylesheet" href="{% static 'css/common.css' %}"
+                            <link rel="stylesheet" href="{% static 'css/questions.css' %}">
+                        </head>
+<body>
+<form id="questions-form" action="/qualify_answers/" method="POST">
+{% csrf_token %}
+<h3>1. Which polysaccharide forms a structural component in plant cell walls and contains β(1→4) glycosidic bonds?</h3>
+<p>1. Which polysaccharide forms a structural component in plant cell walls and contains β(1→4) glycosidic bonds?<select name="q1"><option value="" disabled selected>Select an answer</option><option value="Amylose">Amylose</option><option value="Glycogen">Glycogen</option><option value="Starch">Starch</option><option value="Cellulose">Cellulose</option></select>
+</p>
+<h3>2. Match each enzyme involved in eukaryotic DNA replication with its primary function.</h3>
+
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: inline-block; width: 150px;">DNA helicase </label>
+                            <select name="q2_1" style="display: inline-block; padding: 5px;">
+                                <option value="" disabled selected>Select an answer</option>
+<option value=' causes the separation of the DNA helix into single strands'> causes the separation of the DNA helix into single strands</option>
+<option value=' synthesizes RNA primers required for DNA polymerase to start synthesis'> synthesizes RNA primers required for DNA polymerase to start synthesis</option>
+<option value=' seals the gaps between Okazaki fragments during lagging strand synthesis'> seals the gaps between Okazaki fragments during lagging strand synthesis</option>
+
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: inline-block; width: 150px;">Primase </label>
+                            <select name="q2_2" style="display: inline-block; padding: 5px;">
+                                <option value="" disabled selected>Select an answer</option>
+<option value=' causes the separation of the DNA helix into single strands'> causes the separation of the DNA helix into single strands</option>
+<option value=' synthesizes RNA primers required for DNA polymerase to start synthesis'> synthesizes RNA primers required for DNA polymerase to start synthesis</option>
+<option value=' seals the gaps between Okazaki fragments during lagging strand synthesis'> seals the gaps between Okazaki fragments during lagging strand synthesis</option>
+
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: inline-block; width: 150px;">DNA ligase </label>
+                            <select name="q2_3" style="display: inline-block; padding: 5px;">
+                                <option value="" disabled selected>Select an answer</option>
+<option value=' causes the separation of the DNA helix into single strands'> causes the separation of the DNA helix into single strands</option>
+<option value=' synthesizes RNA primers required for DNA polymerase to start synthesis'> synthesizes RNA primers required for DNA polymerase to start synthesis</option>
+<option value=' seals the gaps between Okazaki fragments during lagging strand synthesis'> seals the gaps between Okazaki fragments during lagging strand synthesis</option>
+
+                            </select>
+                        </div>
+<h3>3. An allosteric inhibitor binds specifically to the active site of an enzyme to directly block substrate access.</h3>
+
+                        <label>
+                            <input type="radio" name="q3" value="T">
+                            V
+                        </label><br>
+                        <label>
+                            <input type="radio" name="q3" value="F">
+                            F
+                        </label><br>
+                    
+<!-- Modal Dialog -->
+        <div id="confirmation-dialog" class="modal">
+            <div class="modal-content">
+                <p>¿Seguro que quieres continuar? No podrás realizar cambios en este formulario una vez calificado ¡Revisa bien!</p>
+                <input type="submit" value="Calificar">
+                <button onclick="closeDialog()" type="button">Seguir revisando</button>
+            </div>
+        </div>
+        <!-- Modal Dialog for "Regresar al chat" -->
+        <div id="chat-confirmation-dialog" class="modal">
+            <div class="modal-content">
+                <p>¿Seguro que quieres regresar al chat? Perderás el progreso en este cuestionario.</p>
+                <button id="confirm-go-home-button" type="button">Regresar al chat</button>
+                <button onclick="closeDialog()" type="button">Seguir revisando</button>
+            </div>
+        </div>
+        <div id="overlay" class="modal-overlay"></div>
+</form>
+<script src="{% static 'js/submitHandler.js' %}"></script>
+<br><button onclick="showDialog()">Continuar</button>
+<button onclick="showChatDialog()">Regresar al chat</button>
+</body>

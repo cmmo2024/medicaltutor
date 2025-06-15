@@ -1,5 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User  
+from django.contrib.auth.models import User
+from django.utils import timezone
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
@@ -108,10 +109,43 @@ class Plan(models.Model):
     def __str__(self):
         return self.plan_name
 
+class ProcessedSubmission(models.Model):
+    submission_id = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ('submission_id', 'user')
+        indexes = [
+            models.Index(fields=['submission_id', 'user']),
+            models.Index(fields=['created_at']),
+        ]
+
+    @classmethod
+    def mark_as_processed(cls, submission_id, user):
+        """Atomically mark a submission as processed"""
+        with transaction.atomic():
+            submission, created = cls.objects.select_for_update().get_or_create(
+                submission_id=submission_id,
+                user=user,
+                defaults={'processed': True}
+            )
+            if not created and not submission.processed:
+                submission.processed = True
+                submission.save()
+            return submission
 
 class Quizzes(models.Model):
     quiz_id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)  # Link to Django's User model
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    submission = models.OneToOneField(
+        'ProcessedSubmission',
+        on_delete=models.CASCADE,
+        null=False,
+        blank=True,
+        related_name='quiz'
+    )
     topic = models.TextField()
     matter = models.TextField()
     questions_count = models.IntegerField()
@@ -121,6 +155,9 @@ class Quizzes(models.Model):
     class Meta:
         managed = True
         db_table = 'quizzes'
+        constraints = [
+        models.UniqueConstraint(fields=['submission'], name='unique_quiz_per_submission')
+    ]
 
 
 class UserStats(models.Model):
@@ -148,3 +185,5 @@ class UserStats(models.Model):
             for item in subject_avgs
         }
         self.save()
+
+

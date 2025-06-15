@@ -26,4 +26,3 @@ typing-inspection==0.4.0
 typing_extensions==4.13.1
 whitenoise==6.9.0
 yattag==1.16.1
-

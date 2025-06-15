@@ -11,9 +11,9 @@
 </head>
 <body>
     <h1 class="subject-header">{{ subject }}</h1>
-    <h2 class="topic-header">{{ topic }}</h2>
+    <h2 class="topic-header">{% if is_general_test %}Test general de {{ subject }}{% else %}{{ topic }}{% endif %}</h2>
 
-    <h2>Nota: {{ score }}/5</h2>
+    <h2>Nota: {{ score }}</h2>
     <hr>
 
     <h3>Revisión:</h3>
@@ -111,3 +111,4 @@
     
 </body>
 </html>
+

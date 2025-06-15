@@ -1,13 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
-    var form = document.getElementById("questions-form");
-    var dialog = document.getElementById("confirmation-dialog");
-    var chatDialog = document.getElementById("chat-confirmation-dialog");
-    var overlay = document.getElementById("overlay");
+    const form = document.getElementById("questions-form");
+    const dialog = document.getElementById("confirmation-dialog");
+    const chatDialog = document.getElementById("chat-confirmation-dialog");
+    const overlay = document.getElementById("overlay");
 
-    // Track whether inputs are disabled
     let inputsDisabled = false;
 
-    // Close the confirmation dialog
     function closeDialog() {
         dialog.style.display = "none";
         chatDialog.style.display = "none";
@@ -18,7 +16,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Disable all input elements
     function disableInputs() {
         const inputs = form.querySelectorAll("input, select, textarea");
         inputs.forEach(input => {
@@ -27,7 +24,6 @@ document.addEventListener("DOMContentLoaded", function () {
         inputsDisabled = true;
     }
 
-    // Enable all input elements
     function enableInputs() {
         const inputs = form.querySelectorAll("input, select, textarea");
         inputs.forEach(input => {
@@ -36,24 +32,20 @@ document.addEventListener("DOMContentLoaded", function () {
         inputsDisabled = false;
     }
 
-    // Show the "Calificar" confirmation dialog
     function showDialog() {
         dialog.style.display = "block";
         overlay.style.display = "block";
     }
 
-    // Show "Regresar al chat" confirmation dialog
     function showChatDialog() {
         chatDialog.style.display = "block";
         overlay.style.display = "block";
     }
 
-    // Expose functions to global scope
     window.closeDialog = closeDialog;
     window.showDialog = showDialog;
     window.showChatDialog = showChatDialog;
 
-    // Get CSRF token from cookie
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -69,80 +61,143 @@ document.addEventListener("DOMContentLoaded", function () {
         return cookieValue;
     }
 
-    // Handle "Calificar" button inside the modal
-    var submitButton = dialog.querySelector("input[type='submit']");
+    const submitButton = dialog.querySelector("input[type='submit']");
     if (submitButton) {
-        submitButton.addEventListener("click", function () {
-            disableInputs();
-        
-            // Collect form data
-            var formData = {};
-            const csrfToken = getCookie('csrftoken');
+        let submissionInProgress = false;
+        let submissionCompleted = false;
 
-            form.querySelectorAll("input[name^='q'], select[name^='q']").forEach(input => {
-                let mainQuestionKey = input.name.split('_')[0];
+        // Generate UUID once per session
+        const submissionId = crypto.randomUUID();
+
+        const handleClick = async function (e) {
+            e.preventDefault();
+
+            if (submissionInProgress || submissionCompleted) {
+                console.log('Submission already in progress or completed');
+                return;
+            }
+
+            submissionInProgress = true;
+            submitButton.disabled = true;
+            disableInputs();
+            submitButton.removeEventListener("click", handleClick); // prevent further clicks
+
+            const csrfToken = getCookie('csrftoken');
+            const formData = {};
+
+            const inputs = form.querySelectorAll("input[name^='q'], select[name^='q']");
+            inputs.forEach(input => {
+                const mainKey = input.name.split('_')[0];
 
                 if (input.type === "checkbox" && input.checked) {
-                    if (!formData[mainQuestionKey]) {
-                        formData[mainQuestionKey] = [];
-                    }
-                    formData[mainQuestionKey].push(input.value);
+                    formData[mainKey] = formData[mainKey] || [];
+                    formData[mainKey].push(input.value);
                 } else if (input.type === "radio" && input.checked) {
-                    formData[mainQuestionKey] = input.value;
+                    formData[mainKey] = input.value;
                 } else if (input.tagName === "SELECT" && input.value) {
-                    if (!formData[mainQuestionKey]) {
-                        formData[mainQuestionKey] = [];
-                    }
-                    formData[mainQuestionKey].push(input.value);
+                    formData[mainKey] = formData[mainKey] || [];
+                    formData[mainKey].push(input.value);
                 } else if (input.type === "text" && input.value) {
-                    formData[mainQuestionKey] = input.value;
+                    formData[mainKey] = input.value;
                 }
             });
 
-            // Submit form data using fetch
-            fetch("/qualify_answers/", {
-                method: "POST",
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => {
+            formData.submission_id = submissionId;
+
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000); // 10s
+
+            try {
+                const response = await fetch("/qualify_answers/", {
+                    method: "POST",
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Idempotency-Key': submissionId
+                    },
+                    body: JSON.stringify(formData),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    alert(`Error: ${data.error}`);
-                    enableInputs();
-                    return;
+
+                let qualifyData;
+                try {
+                    qualifyData = await response.json();
+                } catch (jsonErr) {
+                    console.error("Invalid JSON from server:", jsonErr);
+                    throw new Error("Server returned invalid response.");
                 }
 
-                const encodedResults = encodeURIComponent(JSON.stringify(data.result));
-                const encodedQuestions = encodeURIComponent(JSON.stringify(data.questions));
-                window.location.href = `/qualified_answers/?score=${data.total_score}&results=${encodedResults}&questions=${encodedQuestions}`;
-            })
-            .catch(error => {
-                console.error('Fetch request failed:', error);
-                alert('An error occurred while submitting the form.');
+                // Hide modal
+                dialog.style.display = "none";
+                overlay.style.display = "none";
+
+                // Create and submit form
+                const postForm = document.createElement('form');
+                postForm.method = 'POST';
+                postForm.action = '/qualified_answers/';
+
+                const addHidden = (name, value) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = typeof value === 'object' ? JSON.stringify(value) : value;
+                    postForm.appendChild(input);
+                };
+
+                addHidden('csrfmiddlewaretoken', csrfToken);
+                addHidden('score', qualifyData.total_score);
+                addHidden('results', qualifyData.result);
+                addHidden('questions', qualifyData.questions);
+                addHidden('submission_id', submissionId);
+
+                document.body.appendChild(postForm);
+                submissionCompleted = true;
+                postForm.submit();
+
+            } catch (error) {
+                console.error('Submission error:', error.message || error);
+
+                submitButton.disabled = false;
                 enableInputs();
-            });
+                submissionInProgress = false;
 
-            dialog.style.display = "none";
-            overlay.style.display = "none";
-        });
+                dialog.style.display = "block";
+                overlay.style.display = "block";
+
+                if (error.name === 'AbortError') {
+                    alert('The request timed out. Please try again.');
+                } else {
+                    alert('An error occurred while submitting. Please try again.\n' + error.message);
+                }
+            }
+        };
+
+        submitButton.addEventListener("click", handleClick);
     }
-
-    // Handle "Regresar al chat" button inside the modal
-    var goHomeButton = document.getElementById("confirm-go-home-button");
+  
+    // Chat "Go Home" Button
+    const goHomeButton = document.getElementById("confirm-go-home-button");
     if (goHomeButton) {
         goHomeButton.addEventListener("click", function () {
+            goHomeButton.disabled = true;
             const csrfToken = getCookie('csrftoken');
-            
+          
+			fetch('/cleanup_temp_files/', {
+          		method: 'POST',
+          		headers: {
+              		'X-CSRFToken': getCookie('csrftoken')
+          		}
+      		})
+      		.then(response => response.json())
+      		.catch(error => console.error('Error cleaning up temp files:', error));
+          
             fetch('/restore_quiz_count/', {
                 method: 'POST',
                 headers: {
@@ -151,12 +206,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 body: JSON.stringify({})
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 console.log('Quiz count restored:', data);
                 disableInputs();
@@ -170,3 +220,5 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+
+

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planes de Pago</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'css/plans.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <h1>Planes Disponibles</h1>
+            <a href="{% url 'chat' %}" class="btn btn-primary">Volver al Chat</a>
+            {% if user.profile.plan %}
+                <div class="current-plan-info">
+                    <p>Plan actual: {{ user.profile.plan.plan_name }}</p>
+                    <p>Consultas restantes: {{ user.profile.remaining_queries }}</p>
+                    <p>Cuestionarios restantes: {{ user.profile.remaining_quizzes }}</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="plans-container">
+            {% for plan in plans %}
+                <div class="plan">
+                    <h2>{{ plan.plan_name }}</h2>
+                    <p>Precio: {{ plan.price }} CUP</p>
+                    <p>Consultas máximas: {{ plan.max_queries }}</p>
+                    <p>Cuestionarios máximos: {{ plan.max_quizzes }}</p>
+                    <button class="subscribe-btn" 
+                            data-plan-id="{{ plan.plan_id }}"
+                            data-plan-price="{{ plan.price }}"
+                            data-receiver-id="{{ plan.receiver_id_card }}"
+                            data-phone="{{ plan.phone_number }}"
+                            data-qr-code="{{ plan.qr_code.url }}">
+                        Suscribirse
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Payment Modal -->
+        <div id="payment-modal" class="payment-modal">
+            <div class="payment-modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Monto a transferir <span id="payment-amount"></span> CUP</h2>
+
+                <!-- Error message container -->
+                <div id="modal-error" class="modal-error"></div>
+
+                <!-- Payment Method Switch -->
+                <div class="payment-switch">
+                    <div class="switch-option active" data-method="qr-method">Código QR</div>
+                    <div class="switch-option" data-method="id-method">Tarjeta</div>
+                </div>
+
+                <form id="payment-form" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" id="selected-plan-id" name="plan_id" value="">
+
+                    <!-- QR Code Payment Method -->
+                    <div id="qr-method" class="payment-method active">
+                        <img id="qr-code-image" alt="QR Code" class="qr-code">
+                        <p>Escanee el código QR para realizar el pago</p>
+                    </div>
+
+                    <!-- ID Card Payment Method -->
+                    <div id="id-method" class="payment-method">
+                        <div class="id-card-info">
+                            <p>Cuenta:</p>
+                            <h3 id="receiver-id-display"></h3>
+                            <p>Móvil a confirmar:</p>
+                            <h3 id="phone-number-display"></h3>
+                        </div>
+                    </div>
+
+                    <!-- Transaction ID Input with Tooltip -->
+                    <div class="transaction-input">
+                        <label for="transaction-id">Nro. Transacción:</label>
+                        <input type="text" id="transaction-id" name="transaction_id" required style="text-transform: uppercase;" onkeyup="this.value = this.value.toUpperCase();">
+                        <span class="tooltip">Escriba el número de transacción que aparece en el sms de PAGOxMOVIL en su celular después de realizada la transferencia.</span>
+                    </div>
+
+                    <button type="submit" class="submit-btn">Confirmar Pago</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/plans.js' %}"></script>
+</body>
+</html>
+

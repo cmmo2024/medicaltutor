@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calificación</title>
+    {% load static %}
+    {% load custom_filters %}
+    <script src="{% static 'js/qualificationsHandler.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+</head>
+<body>
+    <h1 class="subject-header">{{ subject }}</h1>
+    <h2 class="topic-header">{% if is_general_test %}Test general de {{ subject }}{% else %}{{ topic }}{% endif %}</h2>
+
+    <h2>Nota: {{ score }}</h2>
+    <hr>
+
+    <h3>Revisión:</h3>
+    <ul>
+        {% for question_id, result in results.items %}
+            <li>
+                {% with question_text=questions|get_item:question_id %}
+                    Pregunta: {{ question_text }}
+                    <br>Tu respuesta: <strong>{{ result.user_answer|default:"Sin respuesta" }}</strong>
+                    {% if result.result %}
+                        <span style="color: green;">Correcto</span>
+                    {% else %}
+                        <span style="color: red;">Incorrecto</span>
+                        - La repuesta correcta es: {{ result.correct_answer }}
+                    {% endif %}
+                {% endwith %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <input type="hidden" id="current-subject" value="{{ subject }}">
+    <input type="hidden" id="current-topic" value="{{ topic }}">
+    <input type="hidden" id="chat-content" value="{{ chat_content }}">
+
+    <button id="go-home-button">Regresar al chat</button>
+    <button id="retry-button" onclick="checkQuizLimit()">Reintentar</button>
+    <button id="statistics-button">Estadísticas</button>
+    
+    <!-- Modal dialog for question selection -->
+    <div id="question-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeQuestionDialog()">&times;</span>
+            <h3>Seleciona el número de preguntas</h3>
+            
+            <!-- Radio buttons for question options -->
+            <div>
+                <label>
+                    <input type="radio" name="question-count" value="3">
+                    3 Preguntas
+                </label><br>
+                <label>
+                    <input type="radio" name="question-count" value="5">
+                    5 Preguntas
+                </label><br>
+                <label>
+                    <input type="radio" name="question-count" value="7">
+                    7 Preguntas
+                </label><br>
+                <label>
+                    <input type="radio" name="question-count" value="10">
+                    10 Preguntas
+                </label>
+            </div>
+            
+            <!-- Action buttons -->
+            <div style="margin-top: 20px;">
+                <button onclick="continueToNextPage()">Continuar</button>
+                <button onclick="closeQuestionDialog()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+     
+    <!-- Loading Dialog -->
+    <div id="loading-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Generando preguntas...</h3>
+            <p>Espere mientras preparo las preguntas.</p>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Plan Upgrade Dialog -->
+    <div id="plan-upgrade-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closePlanUpgradeDialog()">&times;</span>
+            <h3>Límite de Cuestionarios Alcanzado</h3>
+            <p>Has alcanzado el límite de cuestionarios en tu plan actual.</p>
+            <button onclick="window.location.href='{% url 'plans' %}'" class="btn btn-primary">Ver Planes</button>
+            <button onclick="closePlanUpgradeDialog()" class="btn">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // Store the current state in localStorage when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const subject = document.getElementById('current-subject').value;
+            const topic = document.getElementById('current-topic').value;
+            const chatContent = document.getElementById('chat-content').value;
+            
+            if (subject) localStorage.setItem('currentSubject', subject);
+            if (topic) localStorage.setItem('currentTopic', topic);
+            if (chatContent) localStorage.setItem('lastChatContent', chatContent);
+        });
+    </script>
+    
+</body>
+</html>
+

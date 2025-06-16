@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas de Aprendizaje</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'css/statistics.css' %}">
+    <script src="{% static 'js/statistics.js' %}"></script>
+</head>
+<body>
+    <div class="stats-container">
+        <div class="navbar">
+            <h1>Estadísticas de Aprendizaje</h1>
+            <a href="{% url 'chat' %}" class="btn btn-primary">Volver al Chat</a>
+        </div>
+
+        <div class="overview-section">
+            <h2>Resumen General</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total de Cuestionarios</h3>
+                    <p>{{ user_stats.total_quizzes|default:"0" }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Puntuación Promedio</h3>
+                    <p>{{ user_stats.average_score|floatformat:2 }}</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Última Actividad</h3>
+                    <p id="last-activity" data-timestamp="{{ user_stats.last_activity|date:'c' }}">
+                        {{ user_stats.last_activity|date:"d/m/Y h:i A"|default:"Sin actividad" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="overview-section">
+            <h2>Promedio por Asignatura</h2>
+            {% if subject_averages %}
+                <div class="subject-averages-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Asignatura</th>
+                                <th>Promedio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in subject_averages %}
+                            <tr>
+                                <td>{{ subject.matter }}</td>
+                                <td>{{ subject.avg_score|stringformat:".0f" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="no-data">No hay datos disponibles por asignatura.</p>
+            {% endif %}
+        </div>
+
+        <div class="recent-quizzes-section">
+            <h2>Últimos 10 Cuestionarios</h2>
+            {% if recent_quizzes %}
+                <div class="quiz-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Asignatura</th>
+                                <th>Tema</th>
+                                <th>Preguntas</th>
+                                <th>Puntuación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quiz in recent_quizzes %}
+                            <tr>
+                                <td class="quiz-date" data-timestamp="{{ quiz.created_at|date:'c' }}">
+                                    {{ quiz.created_at|date:"d/m/Y h:i A" }}
+                                </td>
+                                <td>{{ quiz.matter }}</td>
+                                <td>{% if quiz.topic %}{{ quiz.topic }}{% else %}Test general de {{ quiz.matter }}{% endif %}</td>
+                                <td>{{ quiz.questions_count }}</td>
+                                <td>{{ quiz.score|stringformat:".0f" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="no-data">No hay cuestionarios realizados aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

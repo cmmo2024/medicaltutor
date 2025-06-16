@@ -1,0 +1,144 @@
+{
+    "Biología Molecular": {
+        "Introducción a la Biología Molecular": [
+            "La materia viva",
+            "El origen de la vida",
+            "Evolución de la vida",
+            "Formas básicas de la vida en la actualidad",
+            "Unidad molecular de los seres vivos",
+            "Introducción al estudio de las biomoléculas"
+        ],
+        "Macromoléculas": [
+            "Carácter macromolecular",
+            "Carácter polimérico",
+            "Carácter uniforme",
+            "Carácter lineal",
+            "Carácter informacional",
+            "Carácter tridimensional",
+            "Tendencia a la agregación"
+        ],
+        "Polisacáridos": [
+            "Estructura y propiedades de los polisacáridos",
+            "Funciones de los polisacáridos",
+            "Los polisacáridos y el principio de organización de las macromoléculas"
+        ],
+        "Ácidos nucleicos": [
+            "Estructura del ADN",
+            "Estructura de los ARN",
+            "Funciones del ADN",
+            "Funciones de los ARN"
+        ],
+        "Precursores de las proteínas": [
+            "Carácter macromolecular",
+            "Clasificación de los aminoácidos",
+            "Propiedades eléctricas de los aminoácidos",
+            "Propiedades ácido básicas de los aminoácidos",
+            "Formación del enlace polimerizante"
+        ],
+        "Proteínas": [
+            "Estructura y propiedades de las proteínas",
+            "Funciones de las proteínas",
+            "Las proteínas y el principio de organización de las macromoléculas"
+        ],
+        "Biocatalizadores": [
+            "Reacciones químicas",
+            "Centro activo",
+            "Cofactores enzimáticos"
+        ],
+        "Enzimas": [
+            "Conceptos de regulación y control",
+            "Tipos de mecanismos generales de control de enzimas",
+            "Regulación alostérica",
+            "Regulación por modificación covalente",
+            "Organización de las enzimas"
+        ],
+        "Cinética enzimática": [
+            "Efecto de la concentración de enzimas",
+            "Efecto de la concentración de sustrato",
+            "Efecto de la concentración de cofactores",
+            "Efecto de la temperatura y el pH",
+            "Efecto de activadores e inhibidores"
+        ],
+        "Membranas biológicas": [
+            "Estructura y propiedades de las membranas",
+            "Funciones de las membranas",
+            "Función protectora",
+            "Función de fijación",
+            "Regulación de la presión osmótica",
+            "Excitabilidad y conductividad",
+            "Función nutritiva",
+            "Función informativa",
+            "Transporte de sustancias a través de las membranas"
+        ],
+        "Complejos multimoleculares": [
+            "Microfilamentos y proteínas motoras asociadas",
+            "Microtúbulos y proteínas motoras asociadas",
+            "Filamentos intermedios",
+            "Vía ubiquitina proteasoma"
+        ],
+        "Replicación del ADN": [
+            "Formación del complejo pre-replicativo en eucariontes",
+            "Activación del complejo pre-replicativo en eucariontes",
+            "Iniciación elongación y terminación en eucariontes",
+            "Eventos posterminación en eucariontes",
+            "Rectificación de los errores de la replicación"
+        ],
+        "Transcripción genética": [
+            "Transcripción genética en eucariontes",
+            "Control de la transcripción genética en eucariontes"
+        ],
+        "Traducción genética": [
+            "Características principales del código genético",
+            "Estructura molecular de los ribosomas",
+            "Características generales de la traducción genética",
+            "Formación del complejo de preiniciación en eucariontes",
+            "Formación del complejo de iniciación en eucariontes",
+            "Elongación en eucariontes",
+            "Terminación en eucariontes",
+            "Posterminación en eucariontes"
+        ]
+    },
+    "Metabolismo y Nutrición": {
+        "Introducción al Metabolismo": [
+            "Concepto y funciones generales",
+            "Vertientes y vínculos",
+            "Vías metabólicas"
+        ],
+        "Respiración celular": [
+            "Respiración celular: concepto, importancia y procesos que la integran",
+            "Ciclo de Krebs: significado biológico, características generales, carácter anfibólico y anaplerosis",
+            "Cadena transportadora de electrones: Organización estructural y funcional, sustratos y productos y formación del gradiente electroquímico",
+            "Fosforilación oxidativa: organización estructural y funcional y teoría quimiosmótica",
+            "Balance energético de la respiración celular",
+            "Regulación de la respiración celular",
+            "Inhibidores de la cadena transportadores de electrones y la fosforilación oxidativa. Desacopladores"
+        ],
+        "Metabolismo de los glúcidos": [
+            "Principales glúcidos de la dieta humana",
+            "Incorporación de la glucosa a las células, fosforilación inicial y su importancia",
+            "Control intrínseco",
+            "Control hormonal",
+            "Metabolismo del glucógeno: vía de síntesis, vía de degradación e importancia biológica",
+            "Control del metabolismo del glucógeno",
+            "Procesos de síntesis y degradación de la glucosa",
+            "Importancia biológica del metabolismo de la glucosa",
+            "Control del metabolismo de la glucosa"
+        ],
+        "Metabolismo de los lípidos": [
+            "Lipogénesis",
+            "Control de la lipogénesis",
+            "Trasporte plasmático de los TAG desde el hígado",
+            "Lipólisis",
+            "Control de la lipólisis"
+        ],
+        "Metabolismo de los compuestos nitrogenados de bajo peso molecular": [
+            "Metabolismo de los cuerpos cetónicos",
+            "Importancia biológica del metabolismo de los cuerpos cetónicos"
+        ],
+        "Bases moleculares de la nutrición humana": [
+            "Vitaminas en la nutrición",
+            "Minerales en la nutrición",
+            "Agua en la nutrición"
+        ]
+    }
+}

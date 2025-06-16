@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor Médico</title>
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+    <script src="{% static 'js/subjectsHandler.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+</head>
+<body>
+      <div class="navbar">
+          {% if user.is_authenticated %}
+              <p>Bienvenido, {{ user.first_name }} ({{ user.email }})</p>
+              <a href="{% url 'statistics' %}" class="btn btn-primary">Estadísticas</a>
+              <p>Plan actual: {{ user.profile.plan.plan_name|default:"Plan Gratis" }}</p>
+              <a href="{% url 'plans' %}" class="btn btn-danger">Planes</a>
+              <a href="{% url 'logout' %}" class="btn btn-danger">Cerrar sesión</a>
+          {% endif %}
+      </div>
+
+      <div class="container">
+        <!-- Sidebar with accordion structure -->
+        <div class="sidebar" id="mySidebar">
+            
+            <h2>Asignatura</h2>
+            
+            <!-- Biología Molecular Accordion -->
+            <button class="accordion" data-subject="Biología Molecular" onclick="selectSubject(this)">Biología Molecular</button>
+
+            <ul class="panel">
+                <li onclick="loadTopic('Introducción a la Biología Molecular')">Introducción a la Biología Molecular</li>
+                {% if user.profile.has_paid_plan %}
+                    <li onclick="loadTopic('Macromoléculas')">Macromoléculas</li>
+                    <li onclick="loadTopic('Precursores de polisacáridos')">Precursores de polisacáridos</li>
+                    <li onclick="loadTopic('Polisacáridos')">Polisacáridos</li>
+                    <li onclick="loadTopic('Precursores de ácidos nucleicos')">Precursores de ácidos nucleicos</li>
+                    <li onclick="loadTopic('Ácidos nucleicos')">Ácidos nucleicos</li>
+                    <li onclick="loadTopic('Precursores de proteínas')">Precursores de proteínas</li>
+                    <li onclick="loadTopic('Proteínas')">Proteínas</li>
+                    <li onclick="loadTopic('Biocatalizadores')">Biocatalizadores</li>
+                    <li onclick="loadTopic('Enzimas')">Enzimas</li>
+                    <li onclick="loadTopic('Cinética enzimática')">Cinética enzimática</li>
+                    <li onclick="loadTopic('Membranas biológicas')">Membranas biológicas</li>
+                    <li onclick="loadTopic('Complejos multimoleculares')">Complejos multimoleculares</li>
+                    <li onclick="loadTopic('Ciclo celular')">Ciclo celular</li>
+                    <li onclick="loadTopic('Organización del genoma eucarionte')">Organización del genoma eucarionte</li>
+                    <li onclick="loadTopic('Replicación del ADN')">Replicación del ADN</li>
+                    <li onclick="loadTopic('Transcripción genética')">Transcripción genética</li>
+                    <li onclick="loadTopic('Traducción genética')">Traducción genética</li>
+                    <li onclick="loadTopic('Estudio comparativo de los procesos de la genética molecular. Mutaciones génicas')">Mutaciones génicas</li>
+                {% else %}
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Macromoléculas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de polisacáridos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Polisacáridos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de ácidos nucleicos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Ácidos nucleicos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Precursores de proteínas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Proteínas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Biocatalizadores 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Enzimas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Cinética enzimática 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Membranas biológicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Complejos multimoleculares 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Ciclo celular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Organización del genoma eucarionte 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Replicación del ADN 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Transcripción genética 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Traducción genética 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Mutaciones génicas 🔒</li>
+                {% endif %}
+            </ul>
+            
+            <!-- Metabolismo y Nutrición Accordion -->
+            <button class="accordion" data-subject="Metabolismo y Nutrición" onclick="selectSubject(this)">Metabolismo y Nutrición</button>
+            <ul class="panel">
+                <li onclick="loadTopic('Introducción al Metabolismo')">Introducción al Metabolismo</li>
+                {% if user.profile.has_paid_plan %}
+                    <li onclick="loadTopic('Respiración celular')">Respiración celular</li>
+                    <li onclick="loadTopic('Metabolismo de los glúcidos')">Metabolismo de los glúcidos</li>
+                    <li onclick="loadTopic('Metabolismo de los lípidos')">Metabolismo de los lípidos</li>
+                    <li onclick="loadTopic('Metabolismo de los compuestos nitrogenados de bajo peso molecular')">Metabolismo de los compuestos nitrogenados de bajo peso molecular</li>
+                    <li onclick="loadTopic('Integración y regulación metabólicas')">Integración y regulación metabólicas</li>
+                    <li onclick="loadTopic('Adaptaciones metabólicas en condiciones específicas')">Adaptaciones metabólicas en condiciones específicas</li>
+                    <li onclick="loadTopic('Bases moleculares de la nutrición humana')">Bases moleculares de la nutrición humana</li>
+                {% else %}
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Respiración celular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los glúcidos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los lípidos 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Metabolismo de los compuestos nitrogenados de bajo peso molecular 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Integración y regulación metabólicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Adaptaciones metabólicas en condiciones específicas 🔒</li>
+                    <li class="locked" onclick="showPlanUpgradeMessage()">Bases moleculares de la nutrición humana 🔒</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Keep the button outside of collapsing content -->
+        <button class="toggle-btn" onclick="toggleNav()" aria-label="Toggle navigation">&times;</button>
+
+        <!-- Chat interface -->
+        <div class="chat-interface" id="chat">
+            <h3 id="topic-title">Seleccione un tema para repasar</h3>
+            <div id="loading-indicator" style="display: none;">⏳ Estoy pensando en la respuesta, por favor espera...</div>
+            <div id="chat-content">
+                <!-- Chat content will be dynamically loaded here -->
+            </div>
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="user-input" 
+                    placeholder="Pregunta sobre este tema..." 
+                    onkeypress="handleKeyPress(event)" 
+                    disabled
+                >
+                <button id="send-button" onclick="sendMessage()" disabled>Enviar</button>
+                <button id="clear-button" onclick="clearChat()" disabled>Borrar conversación</button>
+                <button id="ask-questions-btn" onclick="showQuestionDialog()" disabled>Ejercitar</button>
+            </div>
+        </div>
+
+        <!-- Modal dialog for question selection -->
+        <div id="question-dialog" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeQuestionDialog()">&times;</span>
+                <h3>Seleciona el número de preguntas</h3>
+                
+                <!-- Question type selection -->
+                <div class="question-type-selection" style="margin-bottom: 20px;">
+                    <label>
+                        <input type="radio" name="question-type" value="general" {% if user.profile.has_paid_plan %}checked{% endif %} {% if not user.profile.has_paid_plan %}disabled{% endif %}>
+                        Test general de <span id="subject-name">{{ user.profile.last_subject|default:"la asignatura" }}</span>
+                        {% if not user.profile.has_paid_plan %}
+                            <span style="color: #999; font-size: 0.9em;">🔒 Solo plan de pago</span>
+                        {% endif %}
+                    </label><br>
+                    <label>
+                        <input type="radio" name="question-type" value="topic" {% if not user.profile.has_paid_plan %}checked{% endif %} id="topic-radio">
+                        Test específico de <span id="topic-name">{{ user.profile.last_topic|default:"tema no seleccionado" }}</span>
+                    </label>
+                </div>
+                
+                <!-- Radio buttons for question options -->
+                <div>
+                    <label>
+                        <input type="radio" name="question-count" value="3">
+                        3 Preguntas
+                    </label><br>
+                    <label>
+                        <input type="radio" name="question-count" value="5">
+                        5 Preguntas
+                    </label><br>
+                    <label>
+                        <input type="radio" name="question-count" value="7">
+                        7 Preguntas
+                    </label><br>
+                    <label>
+                        <input type="radio" name="question-count" value="10">
+                        10 Preguntas
+                    </label>
+                </div>
+                
+                <!-- Action buttons -->
+                <div style="margin-top: 20px;">
+                    <button onclick="continueToNextPage()">Continuar</button>
+                    <button onclick="closeQuestionDialog()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Dialog -->
+        <div id="loading-dialog" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h3>Generando preguntas...</h3>
+                <p>Espere mientras preparo las preguntas.</p>
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <!-- Plan Upgrade Dialog -->
+        <div id="plan-upgrade-dialog" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closePlanUpgradeDialog()">&times;</span>
+                <h3>Tema Bloqueado</h3>
+                <p>Este tema está disponible solo para usuarios suscritos a un plan de pago. ¡Actualiza tu plan para acceder a todo el contenido!</p>
+                <button onclick="window.location.href='{% url 'plans' %}'" class="btn btn-primary">Ver Planes</button>
+                <button onclick="closePlanUpgradeDialog()" class="btn">Cancelar</button>
+            </div>
+        </div>
+  
+    </div>
+</body>
+</html>

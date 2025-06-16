@@ -1,0 +1,1 @@
+web: cd medicaltutordjproject && gunicorn medicaltutordjproject.wsgi:application --bind 0.0.0.0:$PORT
